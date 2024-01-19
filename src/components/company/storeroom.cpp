@@ -13,25 +13,25 @@
 *   See the License for the specific language governing permissions and
 *   limitations under the License.
 */
-#include "event_poll.h"
-#include "event_factory.h"
+
+#include "storeroom.h"
 
 namespace speed::mq {
 
-event_factory* event_factory::instance() {
-    static event_factory impl;
-    return &impl;
+storeroom::storeroom(spdmq_ctx_t& ctx) : ctx_(ctx) {}
+
+void storeroom::comm_msg_queue(comm_msg_t&& msg) {
+    if (comm_msg_queue_.size() < ctx().queue_size()) {
+        comm_msg_queue_.push(std::forward<comm_msg_t>(msg));
+        return;
+    }
+    comm_msg_queue_.pop();
+    comm_msg_queue_.push(std::forward<comm_msg_t>(msg));
 }
 
-std::shared_ptr<spdmq_event> event_factory::create_event(spdmq_ctx_t& ctx) {
-    std::shared_ptr<spdmq_event> event_ptr;
-    switch (ctx.event_mode()) {
-        case EVENT_MODE::EVENT_POLL_LT:
-        case EVENT_MODE::EVENT_POLL_ET:
-            event_ptr = std::make_shared<event_poll>(ctx);
-            break;
-    }
-    return event_ptr;
+spdmq_queue<comm_msg_t>& storeroom::comm_msg_queue() {
+    return comm_msg_queue_;
 }
 
 } /* namespace speed::mq */
+

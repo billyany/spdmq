@@ -13,3 +13,15 @@
 *   See the License for the specific language governing permissions and
 *   limitations under the License.
 */
+
+#include "uds_client.h"
+
+namespace speed::mq {
+
+uds_client::uds_client(spdmq_ctx_t& ctx) : socket_client(ctx) {}
+
+void uds_client::open_socket () {
+    spdmq_socket::open_socket(gDomainMap.at(ctx().domain()), gProtocolTypeMap.at(ctx().protocol_type()), 0);
+}
+
+} /* namespace speed::mq */

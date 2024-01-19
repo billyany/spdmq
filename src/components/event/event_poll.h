@@ -13,25 +13,33 @@
 *   See the License for the specific language governing permissions and
 *   limitations under the License.
 */
-#include "event_poll.h"
-#include "event_factory.h"
+
+#pragma once
+
+
+
+#include <unistd.h>
+#include "spdmq_event.h"
+#include "spdmq_error.hpp"
+#include "spdmq_internal_def.h"
 
 namespace speed::mq {
 
-event_factory* event_factory::instance() {
-    static event_factory impl;
-    return &impl;
-}
+class event_poll : public spdmq_event {
+private:
+    fd_t epoll_fd_;
+    std::atomic_bool destroy_event_loop_ = false;
 
-std::shared_ptr<spdmq_event> event_factory::create_event(spdmq_ctx_t& ctx) {
-    std::shared_ptr<spdmq_event> event_ptr;
-    switch (ctx.event_mode()) {
-        case EVENT_MODE::EVENT_POLL_LT:
-        case EVENT_MODE::EVENT_POLL_ET:
-            event_ptr = std::make_shared<event_poll>(ctx);
-            break;
-    }
-    return event_ptr;
-}
+public:
+    event_poll(spdmq_ctx_t& ctx);
+    void event_create() override final;
+    void event_build() override final;
+    void event_destroy() override final;
+    void event_add(fd_t fd) override final;
+    void event_del(fd_t fd) override final;
 
-} /* namespace speed::mq */
+private:
+    void event_poll_loop();
+};
+
+} /* opendbus*/

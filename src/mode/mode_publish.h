@@ -13,25 +13,34 @@
 *   See the License for the specific language governing permissions and
 *   limitations under the License.
 */
-#include "event_poll.h"
-#include "event_factory.h"
+
+#pragma once
+
+#include <cstdint>
+#include "spdmq_mode.h"
 
 namespace speed::mq {
 
-event_factory* event_factory::instance() {
-    static event_factory impl;
-    return &impl;
-}
+class mode_publish : public spdmq_mode {
+private:
+    std::map<std::string, std::set<int32_t>> subscribe_table_; // subscription topic table
+    std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
 
-std::shared_ptr<spdmq_event> event_factory::create_event(spdmq_ctx_t& ctx) {
-    std::shared_ptr<spdmq_event> event_ptr;
-    switch (ctx.event_mode()) {
-        case EVENT_MODE::EVENT_POLL_LT:
-        case EVENT_MODE::EVENT_POLL_ET:
-            event_ptr = std::make_shared<event_poll>(ctx);
-            break;
-    }
-    return event_ptr;
-}
+public:
+    mode_publish(spdmq_ctx& ctx);
+
+    void registered() override;
+
+    spdmq_code_t send(spdmq_msg_t& msg) override;
+
+    void on_recv(comm_msg_t&& msg) override;
+
+    void on_offline(comm_msg_t&& msg) override;
+
+private:
+    void msg_deal(const comm_msg_t& msg);
+    void topic_insert(fd_t session_id, const std::string& topic);
+    void session_remove(fd_t session_id);
+};
 
 } /* namespace speed::mq */

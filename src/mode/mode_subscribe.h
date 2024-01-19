@@ -13,25 +13,19 @@
 *   See the License for the specific language governing permissions and
 *   limitations under the License.
 */
-#include "event_poll.h"
-#include "event_factory.h"
+
+#pragma once
+
+#include "spdmq_mode.h"
 
 namespace speed::mq {
 
-event_factory* event_factory::instance() {
-    static event_factory impl;
-    return &impl;
-}
+class mode_subscribe : public spdmq_mode {
+public:
+    mode_subscribe(spdmq_ctx& ctx);
+    void registered() override;
+    void on_online(comm_msg_t&& msg) override;
+    spdmq_code_t recv(spdmq_msg_t& msg, time_msec_t time_out) override;
+};
 
-std::shared_ptr<spdmq_event> event_factory::create_event(spdmq_ctx_t& ctx) {
-    std::shared_ptr<spdmq_event> event_ptr;
-    switch (ctx.event_mode()) {
-        case EVENT_MODE::EVENT_POLL_LT:
-        case EVENT_MODE::EVENT_POLL_ET:
-            event_ptr = std::make_shared<event_poll>(ctx);
-            break;
-    }
-    return event_ptr;
-}
-
-} /* namespace speed::mq */
+} /* speed::mq */

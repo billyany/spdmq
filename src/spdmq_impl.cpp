@@ -15,68 +15,75 @@
 */
 
 #include "spdmq_impl.h"
-#include "spdmq_mode_base.h"
+#include "mode_factory.h"
 #include "spdmq_func.hpp"
+#include <cstdint>
 
 namespace speed::mq {
 
+spdmq_impl::spdmq_impl(spdmq_ctx& ctx) : ctx_(ctx) {
+    spdmq_mode_ptr_ = mode_factory::instance()->create_mode(ctx);
+}
+
 spdmq_code_t spdmq_impl::bind(const std::string& url) {
-    auto config = url_format_check_and_parse(url);
-    if (!config.parse_result) {
+    auto url_parse = url_format_check_and_parse(url);
+    if (!url_parse.parse_result) {
         return SPDMQ_CODE_ADDRESS_ERROR;
     }
-
-    // dbus_ptr_ = DBUS_MODE_CREATE(ctx_, gDBusNetProtocolMap.at(url.substr(0, 3)));
-    // if (gDBusNetProtocolMap.at(url.substr(0, 3)) == DBUS_NET_PROTOCOL::IPC) {
-    //     return dbus_ptr_->bind("/tmp/" + url.substr(6));
-    // }
-    // return dbus_ptr_->bind(url.substr(6));
+    spdmq_mode_ptr_->bind();
+    return SPDMQ_CODE_OK;
 }
 
 spdmq_code_t spdmq_impl::connect(const std::string& url) {
-    auto config = url_format_check_and_parse(url);
-    if (!config.parse_result) {
+    auto url_parse = url_format_check_and_parse(url);
+    if (!url_parse.parse_result) {
         return SPDMQ_CODE_ADDRESS_ERROR;
     }
-    // dbus_ptr_ = DBUS_MODE_CREATE(ctx_, gDBusNetProtocolMap.at(url.substr(0, 3)));
-    // if (gDBusNetProtocolMap.at(url.substr(0, 3)) == DBUS_NET_PROTOCOL::IPC) {
-    //     return dbus_ptr_->connect("/tmp/" + url.substr(6));    
-    // }
-    // return dbus_ptr_->connect(url.substr(6));
+    spdmq_mode_ptr_->connect();
+    return SPDMQ_CODE_OK;
 }
 
-spdmq_code_t spdmq_impl::send(spdmq_msg& msg) {
-    // return dbus_ptr_->send(dbusData);
+spdmq_code_t spdmq_impl::send(spdmq_msg_t& msg) {
+    return spdmq_mode_ptr_->send(msg);
 }
 
-spdmq_code_t spdmq_impl::recv(spdmq_msg& msg, time_msec_t time_out) {
-    // return dbus_ptr_->recv(dbusData, time_out);
+spdmq_code_t spdmq_impl::recv(spdmq_msg_t& msg, time_msec_t time_out) {
+    return spdmq_mode_ptr_->recv(msg, time_out);
 }
 
-spdmq_config_t spdmq_impl::url_format_check_and_parse(const std::string& url) {
-    spdmq_config_t config = {};
-    config.parse_result = true;
+void spdmq_impl::spin(bool background) {
+    return spdmq_mode_ptr_->spin(background);
+}
+
+spdmq_url_parse_t spdmq_impl::url_format_check_and_parse(const std::string& url) {
+    spdmq_url_parse_t url_parse = {};
+    url_parse.parse_result = true;
     if (url.substr(0, 6) == "ipc://" && regex_match(url.substr(6), R"([a-zA-Z0-9@\._]+)")) {
-        config.address = "/tmp/" + url.substr(6);
+        url_parse.address = "/tmp/" + url.substr(6);
         ctx_.domain(COMM_DOMAIN::IPC);
+        ctx_.config<socket_mode_t>("socket_mode", SOCKET_MODE::UDS);
+        // auto socket_mode = ctx_.config<socket_mode_t>("socket_mode");
+        // printf("socket_mode:%d\n", static_cast<int32_t>(socket_mode));
     }
     else if ((url.substr(0, 6) == "tcp://" || url.substr(0, 6) == "udp://") && regex_match(url.substr(6), R"(((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}:[0-9]{1,5})")) {
-        config.address = url.substr(6);
-        config.ip = config.address.substr(0, config.address.find(":"));
-        config.port = std::atoi(config.address.substr(config.address.find(":") + 1).c_str());
+        url_parse.address = url.substr(6);
+        url_parse.ip = url_parse.address.substr(0, url_parse.address.find(":"));
+        url_parse.port = std::atoi(url_parse.address.substr(url_parse.address.find(":") + 1).c_str());
         ctx_.domain(COMM_DOMAIN::IPV4);
         if (url.substr(0, 3) == "tcp") {
-            ctx_.protocol(COMM_PROTOCOL::TCP);
+            ctx_.protocol_type(COMM_PROTOCOL_TYPE::TCP);
+            ctx_.config<socket_mode_t>("socket_mode", SOCKET_MODE::TCP);
         }
         if (url.substr(0, 3) == "udp") {
-            ctx_.protocol(COMM_PROTOCOL::UDP);
+            ctx_.protocol_type(COMM_PROTOCOL_TYPE::UDP);
+            ctx_.config<socket_mode_t>("socket_mode", SOCKET_MODE::UDP);
         }
     }
     else {
-        config.parse_result = false;
+        url_parse.parse_result = false;
     }
-
-    return config;
+    ctx_.config<spdmq_url_parse_t>("url_parse", url_parse);
+    return url_parse;
 }
 
-} /* speed::mq */
+} /* namespace speed::mq */

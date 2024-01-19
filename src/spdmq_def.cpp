@@ -35,9 +35,9 @@ spdmq_ctx& spdmq_ctx::domain(comm_domain_t domain)
     return *this;
 }
 
-spdmq_ctx& spdmq_ctx::protocol(comm_protocol_t protocol)
+spdmq_ctx& spdmq_ctx::protocol_type(comm_protocol_type_t protocol_type)
 {
-    _protocol = protocol;
+    _protocol_type = protocol_type;
     return *this;
 }
 
@@ -47,17 +47,22 @@ spdmq_ctx& spdmq_ctx::event_mode(event_mode_t event_mode)
     return *this;
 }
 
-spdmq_ctx& spdmq_ctx::evt_num(int32_t evt_num) {
+spdmq_ctx& spdmq_ctx::evt_num(uint32_t evt_num) {
     _evt_num = evt_num;
     return *this;
 }
 
-spdmq_ctx& spdmq_ctx::heartbeat(int32_t heartbeat) {
+spdmq_ctx& spdmq_ctx::heartbeat(uint32_t heartbeat) {
     _heartbeat = heartbeat;
     return *this;
 }
 
-spdmq_ctx& spdmq_ctx::queue_size(int32_t queue_size) {
+spdmq_ctx& spdmq_ctx::reconnect_interval(uint32_t reconnect_interval) {
+    _reconnect_interval = reconnect_interval;
+    return *this;
+}
+
+spdmq_ctx& spdmq_ctx::queue_size(uint32_t queue_size) {
     _queue_size = queue_size;
     return *this;
 }
@@ -81,9 +86,9 @@ comm_domain_t spdmq_ctx::domain()
     return _domain;
 }
 
-comm_protocol_t spdmq_ctx::protocol()
+comm_protocol_type_t spdmq_ctx::protocol_type()
 {
-    return _protocol;
+    return _protocol_type;
 }
 
 event_mode_t spdmq_ctx::event_mode() 
@@ -91,15 +96,19 @@ event_mode_t spdmq_ctx::event_mode()
     return _event_mode;
 }
 
-int32_t spdmq_ctx::evt_num() {
+uint32_t spdmq_ctx::evt_num() {
     return _evt_num;
 }
 
-int32_t spdmq_ctx::heartbeat() {
+uint32_t spdmq_ctx::heartbeat() {
     return _heartbeat;
 }
 
-int32_t spdmq_ctx::queue_size() {
+uint32_t spdmq_ctx::reconnect_interval() {
+    return _reconnect_interval;
+}
+
+uint32_t spdmq_ctx::queue_size() {
     return _queue_size;
 }
 
@@ -107,4 +116,4 @@ std::set<std::string> spdmq_ctx::topics() {
     return _topics;
 }
 
-} /* speed::mq */
+} /* namespace speed::mq */

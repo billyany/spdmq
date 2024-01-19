@@ -13,25 +13,26 @@
 *   See the License for the specific language governing permissions and
 *   limitations under the License.
 */
-#include "event_poll.h"
-#include "event_factory.h"
+
+#include "spdmq_session.h"
 
 namespace speed::mq {
 
-event_factory* event_factory::instance() {
-    static event_factory impl;
-    return &impl;
+spdmq_session::spdmq_session(fd_t session_id) : session_id_(session_id) {}
+
+spdmq_session::~spdmq_session() {
+    close_session();
 }
 
-std::shared_ptr<spdmq_event> event_factory::create_event(spdmq_ctx_t& ctx) {
-    std::shared_ptr<spdmq_event> event_ptr;
-    switch (ctx.event_mode()) {
-        case EVENT_MODE::EVENT_POLL_LT:
-        case EVENT_MODE::EVENT_POLL_ET:
-            event_ptr = std::make_shared<event_poll>(ctx);
-            break;
+fd_t spdmq_session::session_id() {
+    return session_id_;
+}
+
+void spdmq_session::close_session() {
+    if (session_id_ > 3) {
+        close(session_id_);
     }
-    return event_ptr;
+    session_id_ = -1;
 }
 
 } /* namespace speed::mq */

@@ -17,28 +17,32 @@
 #pragma once
 
 #include "spdmq.h"
+#include "spdmq_mode.h"
 #include "spdmq_internal_def.h"
+
 
 namespace speed::mq {
 
 class spdmq_impl : public spdmq {
 private:
-    spdmq_ctx ctx_;
-    // std::shared_ptr<DBusBase> dbus_ptr_;
+    spdmq_ctx& ctx_;
+    std::shared_ptr<spdmq_mode> spdmq_mode_ptr_;
 
 public:
-    spdmq_impl(const spdmq_ctx& ctx) : ctx_(ctx) {}
+    spdmq_impl(spdmq_ctx& ctx);
 
     spdmq_code_t bind(const std::string& url);
 
     spdmq_code_t connect(const std::string& url);
 
-    spdmq_code_t send(spdmq_msg& msg);
+    spdmq_code_t send(spdmq_msg_t& msg);
 
-    spdmq_code_t recv(spdmq_msg& msg, time_msec_t time_out);
+    spdmq_code_t recv(spdmq_msg_t& msg, time_msec_t time_out);
+
+    void spin(bool background);
 
 private:
-    spdmq_config_t url_format_check_and_parse(const std::string& url);
+    spdmq_url_parse_t url_format_check_and_parse(const std::string& url);
 };
 
-} /* speed::mq */
+} /* namespace speed::mq */

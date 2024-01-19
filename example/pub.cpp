@@ -1,23 +1,22 @@
-#include "DBus.h"
-#include <cstdint>
-#include <iostream>
-#include "unistd.h"
+#include <unistd.h>
+#include "spdmq/spdmq.h"
+using namespace speed::mq;
+
 
 int main () {
-    opendbus::DBusCtx ctx;
-    ctx.mode = opendbus::DBUS_MODE::DBUS_PUB;
-    ctx.event_num = 1;
-    auto dbus = NEW_DBUS(ctx);
-    // dbus->bind("ipc://0.0.0.0:12345");
-    dbus->bind("ipc://ADsaabcdefg");
+    spdmq_ctx_t ctx;
+    ctx.mode(COMM_MODE::SPDMQ_PUB); // 设置 pub 模式
+    auto mq_ptr = NEW_SPDMQ(ctx);
+    mq_ptr->bind("ipc://speedmq");  // 绑定 ipc 地址
+    mq_ptr->spin(true); // 设置后台运行
 
     int64_t cnt = 0;
     while (true) {
-        opendbus::DBusData dbusData;
-        dbusData.topic = "opendbus";
-        dbusData.data = std::to_string(cnt++);
-        dbus->send(dbusData);
-        std::cout << cnt << std::endl;
-        // usleep(1000 * 1000);
+        spdmq_msg_t msg;
+        msg.topic = "spdmq"; // 发送 topic 为 spdmq 的信息
+        auto data = std::to_string(cnt++);
+        msg.payload = {data.begin(), data.end()};
+        mq_ptr->send(msg);
+        usleep(100 * 1000);
     }
 }

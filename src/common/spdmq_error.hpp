@@ -15,11 +15,20 @@
 */
 
 #include <sstream>
+#include <cstring>
 #include <stdexcept>
 
 namespace speed::mq {
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+
+#if defined __GNUC__
+#define likely(x) __builtin_expect ((x), 1)
+#define unlikely(x) __builtin_expect ((x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
+#endif
 
 //  Provides convenient way to check for errno-style errors.
 #define ERRNO_ASSERT(x)                         \
@@ -28,9 +37,22 @@ namespace speed::mq {
             std::stringstream ss;               \
             ss << std::strerror(errno)          \
             << " (" << __FILENAME__             \
-            << ":" __LINE__ << ")";             \
+            << ":" << __LINE__ << ")";          \
             throw std::runtime_error(ss.str()); \
         }                                       \
     } while (false)
 
-} /* speed::mq */
+#define SOCKET_ASSERT(x, y)                     \
+    do {                                        \
+        if (unlikely (!(x))) {                  \
+            std::stringstream ss;               \
+            ss << std::strerror(errno)          \
+            << " (" << __FILENAME__             \
+            << ":" << __LINE__ << ")";          \
+            close(y);                           \
+            y = -1;                             \
+            throw std::runtime_error(ss.str()); \
+        }                                       \
+    } while (false)
+
+} /* namespace speed::mq */

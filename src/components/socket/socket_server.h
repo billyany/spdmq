@@ -16,17 +16,24 @@
 
 #pragma once
 
-#include "socket.h"
+#include <memory>
+#include "spdmq_socket.h"
+#include "spdmq_filelock.hpp"
 
 namespace speed::mq {
 
-class socket_server : public socket {
+class socket_server : public spdmq_socket {
+private:
+    std::shared_ptr<spdmq_filelock> file_lock_;
 
-void create_socket() {
+public:
+    void bind () override;
+    void listen () override;
+    fd_t accept (fd_t server_fd) override;
 
-}
-
-
+public:
+    socket_server (spdmq_ctx_t& ctx);
+    virtual ~socket_server () {}
 };
 
-} /* speed::mq */
+} /* namespace speed::mq */

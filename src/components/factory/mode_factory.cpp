@@ -13,25 +13,33 @@
 *   See the License for the specific language governing permissions and
 *   limitations under the License.
 */
-#include "event_poll.h"
-#include "event_factory.h"
+
+#include "mode_factory.h"
+#include "mode_publish.h"
+#include "mode_subscribe.h"
 
 namespace speed::mq {
 
-event_factory* event_factory::instance() {
-    static event_factory impl;
+mode_factory* mode_factory::instance() {
+    static mode_factory impl;
     return &impl;
 }
 
-std::shared_ptr<spdmq_event> event_factory::create_event(spdmq_ctx_t& ctx) {
-    std::shared_ptr<spdmq_event> event_ptr;
-    switch (ctx.event_mode()) {
-        case EVENT_MODE::EVENT_POLL_LT:
-        case EVENT_MODE::EVENT_POLL_ET:
-            event_ptr = std::make_shared<event_poll>(ctx);
+std::shared_ptr<spdmq_mode> mode_factory::create_mode(spdmq_ctx_t& ctx) {
+    std::shared_ptr<spdmq_mode> spdmq_mode_ptr;
+    switch (ctx.mode()) {
+        case COMM_MODE::SPDMQ_PUB:
+            spdmq_mode_ptr = std::make_shared<mode_publish>(ctx);
+            break;
+        case COMM_MODE::SPDMQ_SUB:
+            spdmq_mode_ptr = std::make_shared<mode_subscribe>(ctx);
+            break;
+        case COMM_MODE::SPDMQ_UNKNOW:
+            throw std::runtime_error("mode_factory::create_mode: unknown mode");
             break;
     }
-    return event_ptr;
+
+    return spdmq_mode_ptr;
 }
 
 } /* namespace speed::mq */

@@ -30,12 +30,16 @@ spdmq_code_t spdmq::connect(const std::string& url) {
     return reinterpret_cast<spdmq_impl*>(this)->connect(url);
 }
 
-spdmq_code_t spdmq::send(spdmq_msg& msg) {
+spdmq_code_t spdmq::send(spdmq_msg_t& msg) {
     return reinterpret_cast<spdmq_impl*>(this)->send(msg);
 }
 
-spdmq_code_t spdmq::recv(spdmq_msg& msg, time_msec_t time_out) {
+spdmq_code_t spdmq::recv(spdmq_msg_t& msg, time_msec_t time_out) {
     return reinterpret_cast<spdmq_impl*>(this)->recv(msg, time_out);
+}
+
+void spdmq::spin(bool background) {
+    reinterpret_cast<spdmq_impl*>(this)->spin(background);
 }
 
 spdmq::spdmq() {}

@@ -16,16 +16,24 @@
 
 #pragma once
 
-#include <cstdint>
+#include <map>
 #include <string>
+#include <cstdint>
+#include <sys/socket.h>
+
+#include "spdmq_def.h"
 
 namespace speed::mq {
 
-typedef struct SPDMQ_CONFIG {
-    bool parse_result;
-    std::string ip;
-    uint16_t port;
-    std::string address;
-} spdmq_config_t;
+const std::map<comm_domain_t, int32_t> gDomainMap = {
+    {COMM_DOMAIN::IPV4, AF_INET},
+    {COMM_DOMAIN::IPV6, AF_INET6},
+    {COMM_DOMAIN::IPC, AF_UNIX},
+};
 
-} /* speed::mq */
+const std::map<comm_protocol_type_t, int32_t> gProtocolTypeMap = {
+    {COMM_PROTOCOL_TYPE::TCP, SOCK_STREAM},
+    {COMM_PROTOCOL_TYPE::UDP, SOCK_DGRAM},
+};
+
+} /* namespace speed::mq */

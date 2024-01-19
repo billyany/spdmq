@@ -13,25 +13,32 @@
 *   See the License for the specific language governing permissions and
 *   limitations under the License.
 */
-#include "event_poll.h"
-#include "event_factory.h"
+
+#pragma once
+
+#include "spdmq_def.h"
+#include "spdmq_queue.hpp"
+#include "spdmq_event.h"
+#include "spdmq_spinlock.hpp"
+#include "spdmq_internal_def.h"
 
 namespace speed::mq {
 
-event_factory* event_factory::instance() {
-    static event_factory impl;
-    return &impl;
-}
+class storeroom {
+private:
+    spdmq_queue<comm_msg_t> comm_msg_queue_;
+    spdmq_ctx_t& ctx_;
+    
 
-std::shared_ptr<spdmq_event> event_factory::create_event(spdmq_ctx_t& ctx) {
-    std::shared_ptr<spdmq_event> event_ptr;
-    switch (ctx.event_mode()) {
-        case EVENT_MODE::EVENT_POLL_LT:
-        case EVENT_MODE::EVENT_POLL_ET:
-            event_ptr = std::make_shared<event_poll>(ctx);
-            break;
+public:
+    storeroom(spdmq_ctx_t& ctx);
+    void comm_msg_queue(comm_msg_t&& msg);
+    spdmq_queue<comm_msg_t>& comm_msg_queue();
+
+private:
+    spdmq_ctx_t& ctx() {
+        return ctx_;
     }
-    return event_ptr;
-}
+};
 
 } /* namespace speed::mq */

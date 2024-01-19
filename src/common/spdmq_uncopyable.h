@@ -16,10 +16,26 @@
 
 #pragma once
 
-#include <cstdint>
+/**
+ * @brief This is a class that prevents copying. 
+ *        If you inherit it, you will no longer need to write 
+ *        functions that prohibit copying yourself
+ *
+ */
 
 namespace speed::mq {
 
-using spdmq_fd_t = int32_t;
+class spdmq_uncopyable {
+protected:
+    spdmq_uncopyable() {}
+    ~spdmq_uncopyable() {}
 
-} /* speed::mq */
+private:
+    spdmq_uncopyable(const spdmq_uncopyable&) = delete;
+    spdmq_uncopyable& operator=(const spdmq_uncopyable&) = delete;
+    spdmq_uncopyable(spdmq_uncopyable&&) = delete;
+    spdmq_uncopyable& operator=(spdmq_uncopyable&&) = delete;
+
+};
+
+}  /* namespace speed::mq */

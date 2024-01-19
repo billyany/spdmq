@@ -75,7 +75,7 @@ public:
      * @note for details on "spdmq_code_t", please refer to the "spdmq_def. h" header file
      *
      */
-    spdmq_code_t send(spdmq_msg& msg);
+    spdmq_code_t send(spdmq_msg_t& msg);
 
     /**
      * @brief receive data (if the "on_recv" callback function is used, data cannot be obtained through "recv" function)
@@ -89,26 +89,28 @@ public:
      * @note for details on "spdmq_code_t", please refer to the "spdmq_def. h" header file
      *
      */
-    spdmq_code_t recv(spdmq_msg& msg, time_msec_t time_out = 0);
+    spdmq_code_t recv(spdmq_msg_t& msg, time_msec_t time_out = 0);
+
+    void spin(bool background = false);
 
 public:
     /**
      * @brief receive message callback function object
      * 
      */
-    std::function<void(spdmq_msg&)> on_recv;
+    std::function<void(spdmq_msg_t&)> on_recv;
 
     /**
      * @brief connect callback function object
      * 
      */
-    std::function<void(spdmq_msg&)> on_online;
+    std::function<void(spdmq_msg_t&)> on_online;
 
     /**
      * @brief disconnect callback function object
      * 
      */
-    std::function<void(spdmq_msg&)> on_offline;
+    std::function<void(spdmq_msg_t&)> on_offline;
 
 protected:
     spdmq();

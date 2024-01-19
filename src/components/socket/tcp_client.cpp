@@ -14,17 +14,15 @@
 *   limitations under the License.
 */
 
+#include "tcp_client.h"
+#include "spdmq_socket.h"
+
 namespace speed::mq {
 
-class socket {
-private:
-    spdmq_fd_t socket_fd_;
+tcp_client::tcp_client(spdmq_ctx_t& ctx) : socket_client(ctx) {}
 
-public:
-    spdmq_fd_t socket_fd();
-
-private:
-    int32_t set_nosigpipe (spdmq_fd_t fd);
-};
-
+void tcp_client::open_socket () {
+    spdmq_socket::open_socket(gDomainMap.at(ctx().domain()), SOCK_STREAM, 0);
 }
+
+} /* namespace speed::mq */

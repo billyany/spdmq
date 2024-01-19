@@ -29,26 +29,48 @@ endif ()
 message(STATUS ${CMAKE_CXX_FLAGS})
 
 # 包含头文件
-include_directories(./include)
+include_directories(./)
+include_directories(./spdmq)
+include_directories(./src)
 include_directories(./src/mode)
 include_directories(./src/common)
-# include_directories(./src/platform/event)
-# include_directories(./src/platform/network)
+include_directories(./src/components/socket)
+include_directories(./src/components/event)
+include_directories(./src/components/factory)
+include_directories(./src/components/company)
 
 # 编译库文件
-file(GLOB_RECURSE spdmq_SRC ./src/spdmq.cpp ./src/spdmq_impl.cpp ./src/spdmq_def.cpp )
+file(GLOB_RECURSE spdmq_SRC 
+./src/spdmq.cpp 
+./src/spdmq_impl.cpp 
+./src/spdmq_def.cpp 
+./src/components/socket/spdmq_socket.cpp
+./src/components/socket/socket_server.cpp
+./src/components/socket/socket_client.cpp
+./src/components/socket/tcp_client.cpp
+./src/components/socket/tcp_server.cpp
+./src/components/socket/uds_client.cpp
+./src/components/socket/uds_server.cpp
+./src/components/factory/socket_factory.cpp
+./src/components/factory/event_factory.cpp
+./src/components/factory/mode_factory.cpp
+./src/components/event/spdmq_event.cpp
+./src/components/event/event_poll.cpp
+./src/components/event/spdmq_session.cpp
+./src/components/company/dispatcher.cpp
+./src/components/company/porter.cpp
+./src/components/company/storeroom.cpp
+./src/mode/spdmq_mode.cpp
+./src/mode/mode_publish.cpp
+./src/mode/mode_subscribe.cpp
+)
 if (BUILD_SHARED_LIBS)
     add_library(spdmq SHARED ${spdmq_SRC})
 endif ()
 add_library(spdmq ${spdmq_SRC})
 target_link_libraries(spdmq pthread)
 
-# add_executable(tcpserver src/example/tcp_server.cpp)
-# target_link_libraries(tcpserver opendbus)
-# add_executable(tcpclient src/example/tcp_client.cpp)
-# target_link_libraries(tcpclient opendbus)
-
-# add_executable(pub src/example/pub.cpp)
-# target_link_libraries(pub opendbus)
-# add_executable(sub src/example/sub.cpp)
-# target_link_libraries(sub opendbus)
+add_executable(pub example/pub.cpp)
+target_link_libraries(pub spdmq)
+add_executable(sub example/sub.cpp)
+target_link_libraries(sub spdmq)

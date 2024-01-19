@@ -18,6 +18,7 @@
 
 #include <regex>
 #include <chrono>
+#include <thread>
 
 namespace speed::mq {
 
@@ -30,14 +31,26 @@ inline bool regex_match(const std::string& url, const std::string& re) {
 }
 
 inline int64_t now_usecs_timestamp() {
-    // 获取当前时间点
+    // Get the current time point
     auto now = std::chrono::system_clock::now();
 
-    // 转换为自 epoch（1970年1月1日）以来的微秒数
+    // Convert to microseconds since epoch (January 1, 1970)
     auto duration = now.time_since_epoch();
     auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 
     return microseconds;
 }
 
-} /* speed::mq */
+inline void sleep_s(uint64_t s) {
+    std::this_thread::sleep_for(std::chrono::seconds(s));
+}
+
+inline void sleep_ms(uint64_t ms) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+
+inline void sleep_us(uint64_t us) {
+    std::this_thread::sleep_for(std::chrono::microseconds(us));
+}
+
+} /* namespace speed::mq */
