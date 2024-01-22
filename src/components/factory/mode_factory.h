@@ -22,7 +22,7 @@ namespace speed::mq {
 class mode_factory {
 public:
     static mode_factory* instance();
-    std::shared_ptr<spdmq_mode> create_mode(spdmq_ctx_t& ctx);
+    std::shared_ptr<spdmq_mode> create_mode(spdmq_ctx& ctx, spdmq_callback_t& on_recv, spdmq_callback_t& on_online, spdmq_callback_t& on_offline);
 
 protected:
     mode_factory() {}

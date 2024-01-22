@@ -26,7 +26,6 @@ socket_server::socket_server (spdmq_ctx_t& ctx) : spdmq_socket(ctx) {
 }
 
 void socket_server::bind () {
-    ctx().config("server_fd", socket_fd());
     if (ctx().domain() == COMM_DOMAIN::IPV4) {
         // enable address reuse
         int32_t optval = 1; // 1 - enable, 0 - disenable
@@ -75,7 +74,6 @@ fd_t socket_server::accept (fd_t server_fd) {
     if (ctx().domain() == COMM_DOMAIN::IPC) {
         client_fd = ::accept(server_fd, nullptr, nullptr);
     }
-    // printf("accept client_fd:%d\n", client_fd);
     
     return client_fd;
 }

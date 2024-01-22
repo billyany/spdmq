@@ -14,11 +14,7 @@
 *   limitations under the License.
 */
 
-#include <thread>
-
 #include "dispatcher.h"
-#include "spdmq_func.hpp"
-#include "spdmq_internal_def.h"
 #include "socket_factory.h"
 #include "event_factory.h"
 
@@ -82,34 +78,10 @@ void dispatcher::bind_company(spdmq_ctx_t& ctx) {
 void dispatcher::connect_company(spdmq_ctx_t& ctx) {
     spdmq_socket_ptr_->resolve_address();
     porter_ptr_->on_reconnect();
-    // on_connect_company();
 }
 
 void dispatcher::operating_company(bool background) {
     spdmq_event_ptr_->event_run(background);
 }
-
-// void dispatcher::on_connect_company() {
-//     std::thread([this] {
-//         while (true) {
-//             if (!spdmq_socket_ptr_->connect()) {
-//                 // Add socket fd to event loop
-//                 spdmq_event_ptr_->event_add(spdmq_socket_ptr_->socket_fd());
-//                 // printf("connect success, spdmq_socket_ptr_->socket_fd:%d\n", spdmq_socket_ptr_->socket_fd());
-
-//                 // Add connection events to the event loop
-//                 // printf("spdmq_event_ptr_->urgent_event\n");
-//                 spdmq_event_ptr_->urgent_event({spdmq_socket_ptr_->socket_fd(), EVENT::CONNECTED});
-//                 break;
-//             }
-//             // printf("reconnect_interval:%d\n", ctx().reconnect_interval());
-//             if (ctx().reconnect_interval() == 0) {
-//                 break;
-//             }
-
-//             sleep_ms(ctx().reconnect_interval());
-//         }
-//     }).detach();
-// }
 
 } /* namespace speed::mq */

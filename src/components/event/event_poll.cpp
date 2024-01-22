@@ -51,17 +51,11 @@ void event_poll::event_destroy() {
 }
 
 void event_poll::event_poll_loop() {
-    // printf("event_poll_loop\n");
     auto evt_num = ctx().evt_num() < 100 ? 10 : ctx().evt_num() / 10;
     std::shared_ptr<epoll_event> events_ptr(new epoll_event[evt_num](), [] (epoll_event* events) { delete [] events; });
     auto server_fd = -1;
     if (ctx().has_config("server_fd")) {
-        // printf("server_fd:%d\n", server_fd);
         server_fd = ctx().config<fd_t>("server_fd");
-
-        // Prevent blocking caused by server binding and listening before this thread runs, 
-        // and client connecting without any new connections in the future
-        urgent_event({server_fd, EVENT::CONNECTING});
     }
     
 
@@ -69,16 +63,19 @@ void event_poll::event_poll_loop() {
         
         epoll_event* events = events_ptr.get();
         auto curr_events = epoll_wait(epoll_fd_, events, evt_num, 1000);
-        ERRNO_ASSERT(curr_events != -1);
+        if (curr_events == -1) {
+            ERRNO_ASSERT (errno == EINTR);
+            continue;
+        }
         
         if (destroy_event_loop_.load()) break;
 
         // traverse events
         for (auto i = 0; i < curr_events; ++i) {
-            // printf("events[i].data.fd:%d\n", events[i].data.fd);
+            
             if (-1 == events[i].data.fd) continue;
+
             if (events[i].data.fd == server_fd && ctx().protocol_type() == COMM_PROTOCOL_TYPE::TCP) {
-                // printf("EVENT::CONNECTING events[i].data.fd:%d\n", events[i].data.fd);
                 urgent_event({static_cast<int32_t>(events[i].data.fd), EVENT::CONNECTING});
             }
             else {

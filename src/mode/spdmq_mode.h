@@ -27,13 +27,12 @@ private:
     std::shared_ptr<dispatcher> dispatcher_ptr_;
 
 public:
-    std::function<void(spdmq_msg_t&)> on_mode_recv;
-    std::function<void(spdmq_msg_t&)> on_mode_online;
-    std::function<void(spdmq_msg_t&)> on_mode_offline;
+    spdmq_callback_t& on_mode_recv;
+    spdmq_callback_t& on_mode_online;
+    spdmq_callback_t& on_mode_offline;
 
 public:
-    spdmq_mode(spdmq_ctx& ctx);
-
+    spdmq_mode(spdmq_ctx& ctx, spdmq_callback_t& on_recv, spdmq_callback_t& on_online, spdmq_callback_t& on_offline);
     virtual ~spdmq_mode() {}
     virtual spdmq_code_t send(spdmq_msg_t& msg);
     virtual spdmq_code_t recv(spdmq_msg_t& msg, time_msec_t time_out);

@@ -41,7 +41,6 @@ porter::porter (spdmq_ctx_t& ctx,
 }
 
 int32_t porter::send_msg(int32_t session_id, const comm_msg_t& comm_msg) {
-    // printf("comm_msg.payload size:%lu\n", comm_msg.payload.size());
     return on_send_msg(session_id, comm_msg);
 }
 
@@ -73,7 +72,6 @@ int32_t porter::recv_msg(int32_t session_id, comm_msg_t& comm_msg, time_msec_t t
     }
 
     queue().pop(comm_msg);
-    // printf("pop comm_msg.payload size :%lu\n", comm_msg.payload.size());
 
     return SPDMQ_CODE_OK;
 }
@@ -84,14 +82,11 @@ void porter::on_reconnect() {
             if (!spdmq_socket_ptr_->connect()) {
                 // Add socket fd to event loop
                 spdmq_event_ptr_->event_add(spdmq_socket_ptr_->socket_fd());
-                // printf("connect success, spdmq_socket_ptr_->socket_fd:%d\n", spdmq_socket_ptr_->socket_fd());
 
                 // Add connection events to the event loop
-                // printf("spdmq_event_ptr_->urgent_event\n");
                 spdmq_event_ptr_->urgent_event({spdmq_socket_ptr_->socket_fd(), EVENT::CONNECTED});
                 break;
             }
-            // printf("reconnect_interval:%d\n", ctx().reconnect_interval());
             if (ctx().reconnect_interval() == 0) {
                 break;
             }
@@ -102,25 +97,21 @@ void porter::on_reconnect() {
 }
 
 void porter::on_read(int32_t session_id) {
-    // printf("porter::on_read\n");
     while (true) {
         comm_header header;
         std::vector<uint8_t> body;
         auto rc = spdmq_socket_ptr_->read_data(session_id, header, body);
-        // printf("rc:%d\n", rc);
         if (rc <= 0) {
-            // printf("rc:%d, error msg:%s\n", rc, std::strerror(errno));
+            // TODO: 是否考虑在此处读取失败时，将事件移除
             // spdmq_event_ptr_->event_del(spdmq_socket_ptr_->socket_fd());
             // spdmq_event_ptr_->urgent_event({spdmq_socket_ptr_->socket_fd(), EVENT::DISCONNECT});
             return;
         }
-        // printf("rc:%d\n", rc);
 
         // Deserialize comm_msg_t
         comm_msg_t comm_msg;
         deserialize_comm_msg_t(body, comm_msg);
         comm_msg.session_id = session_id;
-        // printf("comm_msg.payload size :%lu\n", comm_msg.payload.size());
 
         // Update heartbeat status
         if (MESSAGE_TYPE::HEARTBEAT == comm_msg.msg_type) {
@@ -136,19 +127,14 @@ void porter::on_read(int32_t session_id) {
 void porter::on_connecting(int32_t session_id) {
     while (true) {
         auto client_fd = spdmq_socket_ptr_->accept(session_id);
-        if (client_fd > 3) {
-            spdmq_event_ptr_->urgent_event({client_fd, EVENT::CONNECTED});
-        }
-        else {
-            // printf("client_fd failed failed\n");
+        if (client_fd < 3) {
             break;
         }
+        spdmq_event_ptr_->urgent_event({client_fd, EVENT::CONNECTED});
     }
-
 }
 
 void porter::on_connected(int32_t session_id) {
-    // printf("porter::on_connected session_id:%d\n", session_id);
     if (session_id != spdmq_socket_ptr_->socket_fd()) {
         spdmq_event_ptr_->event_add(session_id);
         spdmq_event_ptr_->update_session(session_id);
@@ -158,16 +144,14 @@ void porter::on_connected(int32_t session_id) {
             comm_msg msg;
             msg.session_id = spdmq_socket_ptr_->socket_fd();
             msg.msg_type = MESSAGE_TYPE::HEARTBEAT;
-            // printf("send heartbeat\n");
             auto ret = send_msg(spdmq_socket_ptr_->socket_fd(), msg);
-            // printf("ret:%d\n", ret);
             if (ret != 0) {
-                // printf("ret:%d\n", ret);
                 spdmq_event_ptr_->event_del(spdmq_socket_ptr_->socket_fd());
                 spdmq_event_ptr_->urgent_event({spdmq_socket_ptr_->socket_fd(), EVENT::DISCONNECT});
             }
         });
     }
+
     if (on_online) {
         on_online(session_id);
     }
@@ -179,7 +163,6 @@ void porter::on_disconnect(int32_t session_id) {
         spdmq_event_ptr_->remove_session(session_id);
     }
     else {
-        // printf("porter::on_disconnect session_id:%d\n", session_id);
         spdmq_socket_ptr_->stop_heart();
         close(spdmq_socket_ptr_->socket_fd());
         if (ctx().reconnect_interval()) {
@@ -200,11 +183,9 @@ int32_t porter::on_send_msg(int32_t session_id, const comm_msg& msg) {
 
     comm_msg msg1;
     deserialize_comm_msg_t(body, msg1);
-    // printf("msg1.payload size:%lu, body size:%lu\n", msg1.payload.size(), body.size());
 
     auto ret = spdmq_socket_ptr_->write_data(session_id, header, body);
     if (ret < 0) {
-        // printf("session_id:%d, ret:%d, errno:%s\n", session_id, ret, std::strerror(errno));
         // TODO "Are you considering doing something with the session ID ?"
         // spdmq_event_ptr_->event_del(session_id);
         // spdmq_event_ptr_->urgent_event({session_id, EVENT::DISCONNECT});

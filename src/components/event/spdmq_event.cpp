@@ -14,7 +14,6 @@
 *   limitations under the License.
 */
 
-#include <cstdio>
 #include <memory>
 #include <thread>
 #include "spdmq_event.h"
@@ -32,7 +31,6 @@ spdmq_ctx_t& spdmq_event::ctx() {
 }
 
 void spdmq_event::event_run(bool background) {
-    // session_timer_.start(ctx().heartbeat(), std::bind(&spdmq_event::session_clear, this));
     std::thread event_thread(std::bind(&spdmq_event::event_loop, this));
     if (background) {
         event_thread.detach();
@@ -59,9 +57,7 @@ void spdmq_event::urgent_event(std::pair<int32_t, EVENT> event) {
 }
 
 void spdmq_event::notify_event() {
-    // printf("cv_.notify_all before\n");
     cv_.notify_one();
-    // printf("cv_.notify_all after\n");
 }
 
 void spdmq_event::update_session(fd_t session_id) {
@@ -96,17 +92,13 @@ void spdmq_event::event_loop() {
         {
             std::unique_lock<std::mutex> lk(lock_);
             cv_.wait(lk, [this] {
-                // printf("wait\n");
                 return !normal_event().empty() || !urgent_event().empty() || stop_event_loop_; 
             });
         }
-        // printf("wait out2\n");
         if (stop_event_loop_) break;
-        // printf("wait out2\n");
 
         event_consume(urgent_event());
         event_consume(normal_event());
-        // printf("wait out3\n");
     }
 }
 
@@ -115,22 +107,18 @@ void spdmq_event::event_consume(T& queue) {
     while (!queue.empty()) {
         auto event = queue.pop();
         if (EVENT::READ == event.second && on_read) {
-            // printf("EVENT::READ\n");
             on_read(event.first);
             continue;
         }
         if (EVENT::CONNECTING == event.second && on_connecting) {
-            // printf("EVENT::CONNECTING\n");
             on_connecting(event.first);
             continue;
         }
         if (EVENT::CONNECTED == event.second && on_connected) {
-            // printf("EVENT::CONNECTED\n");
             on_connected(event.first);
             continue;
         }
         if (EVENT::DISCONNECT == event.second && on_disconnect) {
-            // printf("EVENT::DISCONNECT\n");
             on_disconnect(event.first);
             continue;
         }

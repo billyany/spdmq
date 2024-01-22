@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <string>
 #include <sstream>
+#include <functional>
 
 namespace speed::mq {
 
@@ -229,5 +230,7 @@ typedef struct spdmq_msg {
         return ss.str();
     }
 } spdmq_msg_t;
+
+using spdmq_callback_t = std::function<void(spdmq_msg_t&)>;
 
 } /* namespace opendbus */

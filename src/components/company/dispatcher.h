@@ -17,9 +17,9 @@
 #pragma once
 
 
-#include "spdmq_socket.h"
 #include "porter.h"
 #include "storeroom.h"
+#include "spdmq_socket.h"
 namespace speed::mq {
 
 class dispatcher {
@@ -54,9 +54,6 @@ public:
     std::shared_ptr<spdmq_socket>& spdmq_socket_ptr() {
         return spdmq_socket_ptr_;
     }
-
-private:
-    // void on_connect_company();
 
 private:
     spdmq_ctx_t& ctx() {

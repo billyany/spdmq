@@ -17,12 +17,11 @@
 #include "spdmq_impl.h"
 #include "mode_factory.h"
 #include "spdmq_func.hpp"
-#include <cstdint>
 
 namespace speed::mq {
 
 spdmq_impl::spdmq_impl(spdmq_ctx& ctx) : ctx_(ctx) {
-    spdmq_mode_ptr_ = mode_factory::instance()->create_mode(ctx);
+    spdmq_mode_ptr_ = mode_factory::instance()->create_mode(ctx, on_recv, on_online, on_offline);
 }
 
 spdmq_code_t spdmq_impl::bind(const std::string& url) {
@@ -62,8 +61,6 @@ spdmq_url_parse_t spdmq_impl::url_format_check_and_parse(const std::string& url)
         url_parse.address = "/tmp/" + url.substr(6);
         ctx_.domain(COMM_DOMAIN::IPC);
         ctx_.config<socket_mode_t>("socket_mode", SOCKET_MODE::UDS);
-        // auto socket_mode = ctx_.config<socket_mode_t>("socket_mode");
-        // printf("socket_mode:%d\n", static_cast<int32_t>(socket_mode));
     }
     else if ((url.substr(0, 6) == "tcp://" || url.substr(0, 6) == "udp://") && regex_match(url.substr(6), R"(((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}:[0-9]{1,5})")) {
         url_parse.address = url.substr(6);

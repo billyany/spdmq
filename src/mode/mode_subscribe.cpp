@@ -18,7 +18,8 @@
 
 namespace speed::mq {
 
-mode_subscribe::mode_subscribe(spdmq_ctx& ctx) : spdmq_mode(ctx) {
+mode_subscribe::mode_subscribe(spdmq_ctx& ctx, spdmq_callback_t& on_recv, spdmq_callback_t& on_online, spdmq_callback_t& on_offline) 
+    : spdmq_mode(ctx, on_recv, on_online, on_offline) {
 }
 
 void mode_subscribe::registered() {
@@ -43,14 +44,17 @@ void mode_subscribe::registered() {
 }
 
 void mode_subscribe::on_online(comm_msg_t&& msg) {
-    // printf("mode_subscribe::on_online\n");
     for (auto& topic : ctx().topics()) {
-        // printf("mode_subscribe::on_online topic:%s, msg.session_id:%d\n", topic.c_str(), msg.session_id);
         msg.topic = topic;
         msg.msg_type = MESSAGE_TYPE::TOPIC;
         handler()->porter_ptr()->send_msg(msg.session_id, msg);
-        // auto ret = handler()->porter_ptr()->send_msg(msg.session_id, msg);
-        // printf("ret:%d\n", ret);
+
+    }
+
+    if (on_mode_online) {
+        spdmq_msg_t spdmq_msg;
+        comm_msg_to_spdmq_msg(msg, spdmq_msg);
+        on_mode_online(spdmq_msg);
     }
 }
 

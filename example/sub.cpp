@@ -8,12 +8,15 @@ int main () {
        .mode(COMM_MODE::SPDMQ_SUB) // 设置 sub 模式
        .heartbeat(10);             // 设置心跳为 10 ms
     auto mq_ptr = NEW_SPDMQ(ctx);
-    mq_ptr->connect("ipc://speedmq"); // 连接 ipc 地址
-    mq_ptr->spin(true);
-
-    while (true) {
-        spdmq_msg_t msg;
-        mq_ptr->recv(msg, 0); // 阻塞接收消息
+    mq_ptr->on_recv = [] (spdmq_msg_t& msg) {
         std::cout << "data:" << (char*)msg.payload.data() << std::endl;
-    }
+    };
+    mq_ptr->on_online = [] (spdmq_msg_t& msg) {
+        std::cout << "connect success, session id:" << msg.session_id << std::endl;
+    };
+    mq_ptr->on_offline = [] (spdmq_msg_t& msg) {
+        std::cout << "disconnect success, session id:" << msg.session_id << std::endl;
+    };
+    mq_ptr->connect("ipc://speedmq"); // 连接 ipc 地址
+    mq_ptr->spin();
 }

@@ -27,7 +27,7 @@ private:
     std::atomic_flag lock_ = ATOMIC_FLAG_INIT;
 
 public:
-    mode_publish(spdmq_ctx& ctx);
+    mode_publish(spdmq_ctx& ctx, spdmq_callback_t& on_recv, spdmq_callback_t& on_online, spdmq_callback_t& on_offline);
 
     void registered() override;
 

@@ -22,6 +22,7 @@ uds_server::uds_server(spdmq_ctx_t& ctx) : socket_server(ctx) {}
 
 void uds_server::open_socket () {
     spdmq_socket::open_socket(gDomainMap.at(ctx().domain()), gProtocolTypeMap.at(ctx().protocol_type()), 0);
+    ctx().config("server_fd", socket_fd());
 }
 
 } /* namespace speed::mq */

@@ -98,19 +98,19 @@ public:
      * @brief receive message callback function object
      * 
      */
-    std::function<void(spdmq_msg_t&)> on_recv;
+    spdmq_callback_t on_recv;
 
     /**
      * @brief connect callback function object
      * 
      */
-    std::function<void(spdmq_msg_t&)> on_online;
+    spdmq_callback_t on_online;
 
     /**
      * @brief disconnect callback function object
      * 
      */
-    std::function<void(spdmq_msg_t&)> on_offline;
+    spdmq_callback_t on_offline;
 
 protected:
     spdmq();

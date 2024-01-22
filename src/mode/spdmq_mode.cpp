@@ -20,7 +20,8 @@
 
 namespace speed::mq {
 
-spdmq_mode::spdmq_mode(spdmq_ctx& ctx) : ctx_(ctx) {
+spdmq_mode::spdmq_mode(spdmq_ctx& ctx, spdmq_callback_t& on_recv, spdmq_callback_t& on_online, spdmq_callback_t& on_offline) 
+    : ctx_(ctx), on_mode_recv(on_recv), on_mode_online(on_online), on_mode_offline(on_offline) {
     dispatcher_ptr_ = std::make_shared<dispatcher>(ctx);
 }
 
@@ -44,7 +45,6 @@ void spdmq_mode::on_recv(comm_msg_t&& msg) {
 }
 
 void spdmq_mode::on_online(comm_msg_t&& msg) {
-    // printf("session id:%d\n", msg.session_id);
     if (on_mode_online) {
         spdmq_msg_t spdmq_msg;
         comm_msg_to_spdmq_msg(msg, spdmq_msg);

@@ -25,14 +25,14 @@ mode_factory* mode_factory::instance() {
     return &impl;
 }
 
-std::shared_ptr<spdmq_mode> mode_factory::create_mode(spdmq_ctx_t& ctx) {
+std::shared_ptr<spdmq_mode> mode_factory::create_mode(spdmq_ctx& ctx, spdmq_callback_t& on_recv, spdmq_callback_t& on_online, spdmq_callback_t& on_offline) {
     std::shared_ptr<spdmq_mode> spdmq_mode_ptr;
     switch (ctx.mode()) {
         case COMM_MODE::SPDMQ_PUB:
-            spdmq_mode_ptr = std::make_shared<mode_publish>(ctx);
+            spdmq_mode_ptr = std::make_shared<mode_publish>(ctx, on_recv, on_online, on_offline);
             break;
         case COMM_MODE::SPDMQ_SUB:
-            spdmq_mode_ptr = std::make_shared<mode_subscribe>(ctx);
+            spdmq_mode_ptr = std::make_shared<mode_subscribe>(ctx, on_recv, on_online, on_offline);
             break;
         case COMM_MODE::SPDMQ_UNKNOW:
             throw std::runtime_error("mode_factory::create_mode: unknown mode");

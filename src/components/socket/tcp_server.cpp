@@ -22,6 +22,7 @@ tcp_server::tcp_server(spdmq_ctx_t& ctx) : socket_server(ctx) {}
 
 void tcp_server::open_socket () {
     spdmq_socket::open_socket(gDomainMap.at(ctx().domain()), SOCK_STREAM, 0);
+    ctx().config("server_fd", socket_fd());
 }
 
 

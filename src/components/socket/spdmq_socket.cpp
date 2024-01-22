@@ -46,7 +46,6 @@ int32_t spdmq_socket::on_read_data(int32_t session_id, uint8_t* buf, int32_t buf
     // 分段读取数据体
     while (total_bytes_received < buf_len) {
         bytes_received = recv(session_id, buf + total_bytes_received, buf_len - total_bytes_received, 0);
-        // printf("bytes_received:%d, errno:%d, errno msg:%s\n", bytes_received, errno, std::strerror(errno));
 
         if (bytes_received <= 0) {
             ERRNO_ASSERT (errno != EBADF && errno != EFAULT && errno != ENOMEM && errno != ENOTSOCK);

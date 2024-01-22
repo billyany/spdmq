@@ -22,7 +22,7 @@ namespace speed::mq {
 
 class mode_subscribe : public spdmq_mode {
 public:
-    mode_subscribe(spdmq_ctx& ctx);
+    mode_subscribe(spdmq_ctx& ctx, spdmq_callback_t& on_recv, spdmq_callback_t& on_online, spdmq_callback_t& on_offline);
     void registered() override;
     void on_online(comm_msg_t&& msg) override;
     spdmq_code_t recv(spdmq_msg_t& msg, time_msec_t time_out) override;
