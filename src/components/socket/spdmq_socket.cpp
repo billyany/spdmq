@@ -48,11 +48,15 @@ int32_t spdmq_socket::on_read_data(int32_t session_id, uint8_t* buf, int32_t buf
         bytes_received = recv(session_id, buf + total_bytes_received, buf_len - total_bytes_received, 0);
 
         if (bytes_received <= 0) {
-            ERRNO_ASSERT (errno != EBADF && errno != EFAULT && errno != ENOMEM && errno != ENOTSOCK);
+            ERRNO_ASSERT (errno != EFAULT && errno != ENOMEM && errno != ENOTSOCK);
 
             // Interrupted system call
             if (errno == EINTR) {
                 continue;
+            }
+
+            if (errno == EBADF) { // socket fd close
+                return -2;
             }
 
             return bytes_received;

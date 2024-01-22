@@ -25,8 +25,8 @@ class spdmq_session {
 private:
     fd_t session_id_;
 
-public:
-    std::function<void(fd_t)> on_notify_event;
+// public:
+//     std::function<void(fd_t)> on_notify_event;
 
 public:
     spdmq_session(fd_t session_id);

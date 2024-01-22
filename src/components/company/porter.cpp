@@ -79,7 +79,9 @@ int32_t porter::recv_msg(int32_t session_id, comm_msg_t& comm_msg, time_msec_t t
 void porter::on_reconnect() {
     std::thread([this] {
         while (true) {
+            printf("ctx().reconnect_interval():%d\n", ctx().reconnect_interval());
             if (!spdmq_socket_ptr_->connect()) {
+                // Connect success
                 // Add socket fd to event loop
                 spdmq_event_ptr_->event_add(spdmq_socket_ptr_->socket_fd());
 
@@ -87,10 +89,14 @@ void porter::on_reconnect() {
                 spdmq_event_ptr_->urgent_event({spdmq_socket_ptr_->socket_fd(), EVENT::CONNECTED});
                 break;
             }
+
+            // Connect failed
+            // If the reconnect interval is 0, only connect once
             if (ctx().reconnect_interval() == 0) {
                 break;
             }
 
+            // sleep 'reconnect interval' time
             sleep_ms(ctx().reconnect_interval());
         }
     }).detach();
@@ -102,9 +108,12 @@ void porter::on_read(int32_t session_id) {
         std::vector<uint8_t> body;
         auto rc = spdmq_socket_ptr_->read_data(session_id, header, body);
         if (rc <= 0) {
-            // TODO: 是否考虑在此处读取失败时，将事件移除
-            // spdmq_event_ptr_->event_del(spdmq_socket_ptr_->socket_fd());
-            // spdmq_event_ptr_->urgent_event({spdmq_socket_ptr_->socket_fd(), EVENT::DISCONNECT});
+            if (rc == -2) {
+                spdmq_event_ptr_->event_del(session_id);
+                spdmq_event_ptr_->remove_session(session_id);
+                spdmq_event_ptr_->urgent_event({spdmq_socket_ptr_->socket_fd(), EVENT::DISCONNECT});
+            }
+
             return;
         }
 
@@ -162,7 +171,8 @@ void porter::on_disconnect(int32_t session_id) {
         spdmq_event_ptr_->event_del(session_id);
         spdmq_event_ptr_->remove_session(session_id);
     }
-    else {
+
+    if (!ctx().has_config("server_fd")) {
         spdmq_socket_ptr_->stop_heart();
         close(spdmq_socket_ptr_->socket_fd());
         if (ctx().reconnect_interval()) {
@@ -170,6 +180,7 @@ void porter::on_disconnect(int32_t session_id) {
             on_reconnect();
         }
     }
+
     if (on_offline) {
         on_offline(session_id);
     }

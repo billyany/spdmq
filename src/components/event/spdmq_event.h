@@ -47,8 +47,8 @@ private:
     spdmq_queue<std::pair<int32_t, EVENT>> urgent_queue_;
 
     spdmq_timer session_clear_timer_, heartbeat_cnt_timer_;
-    uint64_t heartbeat_loop_cnt_ = 2;
-    uint64_t heartbeat_clear_cnt_ = 0;
+    std::atomic_uint64_t heartbeat_loop_cnt_ = 2;
+    std::atomic_uint64_t heartbeat_clear_cnt_ = 0;
     std::atomic_flag atomic_lock_ = ATOMIC_FLAG_INIT;
     std::vector<std::map<fd_t, std::shared_ptr<spdmq_session>>> session_map_list_;
 

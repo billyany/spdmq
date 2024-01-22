@@ -33,14 +33,16 @@ spdmq_ctx_t& spdmq_event::ctx() {
 void spdmq_event::event_run(bool background) {
     std::thread event_thread(std::bind(&spdmq_event::event_loop, this));
 
-    session_clear_timer_.start(ctx().heartbeat(), [this] () {
-        session_clear();
-    });
+    if (ctx().has_config("server_fd")) {
+        session_clear_timer_.start(ctx().heartbeat(), [this] () {
+            session_clear();
+        });
 
-    heartbeat_cnt_timer_.start(ctx().heartbeat(), [this] () {
-        ++heartbeat_loop_cnt_;
-        ++heartbeat_clear_cnt_;
-    });
+        heartbeat_cnt_timer_.start(ctx().heartbeat(), [this] () {
+            heartbeat_loop_cnt_.fetch_add(1);
+            heartbeat_clear_cnt_.fetch_add(1);
+        });
+    }
 
     if (background) {
         event_thread.detach();
@@ -76,16 +78,16 @@ void spdmq_event::update_session(fd_t session_id) {
     for (auto& session_map : session_map_list_) {
         auto it = session_map.find(session_id);
         if (it != session_map.end()) {
-            session_map_list_[heartbeat_loop_cnt_ % HEARTBEAT_RESETTING][session_id] = it->second;
+            session_map_list_[heartbeat_loop_cnt_.load() % HEARTBEAT_RESETTING][session_id] = it->second;
             return;
         }
     }
     auto session_id_ptr = std::make_shared<spdmq_session>(session_id);
-    session_id_ptr->on_notify_event = [this] (fd_t session_id) {
-        urgent_event().push({session_id, EVENT::DISCONNECT});
-        notify_event();
-    };
-    session_map_list_[heartbeat_loop_cnt_ % HEARTBEAT_RESETTING][session_id] = session_id_ptr;
+    // session_id_ptr->on_notify_event = [this] (fd_t session_id) {
+    //     urgent_event().push({session_id, EVENT::DISCONNECT});
+    //     notify_event();
+    // };
+    session_map_list_[heartbeat_loop_cnt_.load() % HEARTBEAT_RESETTING][session_id] = session_id_ptr;
 
 }
 
@@ -101,7 +103,7 @@ void spdmq_event::remove_session(fd_t session_id) {
 
 void spdmq_event::session_clear() {
     spdmq_spinlock<std::atomic_flag> lk(atomic_lock_);
-    session_map_list_[heartbeat_clear_cnt_ % HEARTBEAT_RESETTING].clear();
+    session_map_list_[heartbeat_clear_cnt_.load() % HEARTBEAT_RESETTING].clear();
 }
 
 void spdmq_event::event_loop() {

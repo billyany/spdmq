@@ -40,7 +40,6 @@ void dispatcher::registered_company(spdmq_ctx_t& ctx) {
     spdmq_event_ptr_ = event_factory::instance()->create_event(ctx);
     spdmq_event_ptr_->event_create();
     spdmq_event_ptr_->event_build();
-    // sleep_ms(100);
 
     // Create storeroom ptr
     storeroom_ptr_ = std::make_shared<storeroom>(ctx);
