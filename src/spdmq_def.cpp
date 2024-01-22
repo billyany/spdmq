@@ -53,7 +53,7 @@ spdmq_ctx& spdmq_ctx::evt_num(uint32_t evt_num) {
 }
 
 spdmq_ctx& spdmq_ctx::heartbeat(uint32_t heartbeat) {
-    _heartbeat = heartbeat;
+    _heartbeat = heartbeat < 10 ? 10 : heartbeat;
     return *this;
 }
 

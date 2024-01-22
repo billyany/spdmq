@@ -27,6 +27,8 @@
 #include "event_struct.h"
 #include "spdmq_internal_def.h"
 
+#define HEARTBEAT_RESETTING 4
+
 namespace speed::mq {
 
 class spdmq_event {
@@ -43,10 +45,10 @@ private:
     std::atomic_bool stop_event_loop_ = false;
     set_queue<std::pair<int32_t, EVENT>> normal_queue_;
     spdmq_queue<std::pair<int32_t, EVENT>> urgent_queue_;
-    // std::map<EVENT_PRIORITY, set_queue<std::pair<int32_t, EVENT>>> event_map_queue_;
 
-    spdmq_timer session_timer_;
-    uint64_t heartbeat_loop_cnt_ = 0;
+    spdmq_timer session_clear_timer_, heartbeat_cnt_timer_;
+    uint64_t heartbeat_loop_cnt_ = 2;
+    uint64_t heartbeat_clear_cnt_ = 0;
     std::atomic_flag atomic_lock_ = ATOMIC_FLAG_INIT;
     std::vector<std::map<fd_t, std::shared_ptr<spdmq_session>>> session_map_list_;
 

@@ -4,9 +4,9 @@ using namespace speed::mq;
 
 int main () {
     spdmq_ctx_t ctx;
-    ctx.topics({"spdmq"})          // 设置订阅的 topic 信息
+    ctx.topics({"spdmq"})    // 设置订阅的 topic 信息
        .mode(COMM_MODE::SPDMQ_SUB) // 设置 sub 模式
-       .heartbeat(10);             // 设置心跳为 10 ms
+       .heartbeat(50);        // 设置心跳为 50 ms
     auto mq_ptr = NEW_SPDMQ(ctx);
     mq_ptr->on_recv = [] (spdmq_msg_t& msg) {
         std::cout << "data:" << (char*)msg.payload.data() << std::endl;

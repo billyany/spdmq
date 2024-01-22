@@ -32,6 +32,16 @@ spdmq_ctx_t& spdmq_event::ctx() {
 
 void spdmq_event::event_run(bool background) {
     std::thread event_thread(std::bind(&spdmq_event::event_loop, this));
+
+    session_clear_timer_.start(ctx().heartbeat(), [this] () {
+        session_clear();
+    });
+
+    heartbeat_cnt_timer_.start(ctx().heartbeat(), [this] () {
+        ++heartbeat_loop_cnt_;
+        ++heartbeat_clear_cnt_;
+    });
+
     if (background) {
         event_thread.detach();
     }
@@ -43,7 +53,8 @@ void spdmq_event::event_run(bool background) {
 void spdmq_event::event_stop() {
     stop_event_loop_.store(true);
     notify_event();
-    session_timer_.expire();
+    session_clear_timer_.expire();
+    heartbeat_cnt_timer_.expire();
 }
 
 void spdmq_event::normal_event(std::pair<int32_t, EVENT> event) {
@@ -65,11 +76,17 @@ void spdmq_event::update_session(fd_t session_id) {
     for (auto& session_map : session_map_list_) {
         auto it = session_map.find(session_id);
         if (it != session_map.end()) {
-            session_map_list_[heartbeat_loop_cnt_ % 4][session_id] = it->second;
+            session_map_list_[heartbeat_loop_cnt_ % HEARTBEAT_RESETTING][session_id] = it->second;
             return;
         }
     }
-    session_map_list_[heartbeat_loop_cnt_ % 4][session_id] = std::make_shared<spdmq_session>(session_id);
+    auto session_id_ptr = std::make_shared<spdmq_session>(session_id);
+    session_id_ptr->on_notify_event = [this] (fd_t session_id) {
+        urgent_event().push({session_id, EVENT::DISCONNECT});
+        notify_event();
+    };
+    session_map_list_[heartbeat_loop_cnt_ % HEARTBEAT_RESETTING][session_id] = session_id_ptr;
+
 }
 
 void spdmq_event::remove_session(fd_t session_id) {
@@ -84,7 +101,7 @@ void spdmq_event::remove_session(fd_t session_id) {
 
 void spdmq_event::session_clear() {
     spdmq_spinlock<std::atomic_flag> lk(atomic_lock_);
-    session_map_list_[heartbeat_loop_cnt_++ % 4].clear();
+    session_map_list_[heartbeat_clear_cnt_ % HEARTBEAT_RESETTING].clear();
 }
 
 void spdmq_event::event_loop() {

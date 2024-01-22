@@ -17,13 +17,10 @@
 #include "event_poll.h"
 #include <thread>
 #include <cstdint>
-#include <future>
 
 namespace speed::mq {
 
-event_poll::event_poll(spdmq_ctx_t& ctx) : spdmq_event(ctx) {
-
-}
+event_poll::event_poll(spdmq_ctx_t& ctx) : spdmq_event(ctx) {}
 
 void event_poll::event_add(fd_t fd) {
     epoll_event evt;
@@ -42,7 +39,6 @@ void event_poll::event_create() {
 }
 
 void event_poll::event_build() {
-    // std::async(std::launch::async, &event_poll::event_poll_loop, this);
     std::thread(&event_poll::event_poll_loop, this).detach();
 }
 
@@ -57,7 +53,6 @@ void event_poll::event_poll_loop() {
     if (ctx().has_config("server_fd")) {
         server_fd = ctx().config<fd_t>("server_fd");
     }
-    
 
     while (true) {
         

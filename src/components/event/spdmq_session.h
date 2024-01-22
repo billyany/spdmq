@@ -26,6 +26,9 @@ private:
     fd_t session_id_;
 
 public:
+    std::function<void(fd_t)> on_notify_event;
+
+public:
     spdmq_session(fd_t session_id);
     ~spdmq_session();
     fd_t session_id();

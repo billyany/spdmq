@@ -131,7 +131,7 @@ private:
     comm_protocol_type_t _protocol_type;      // communication protocol type
     event_mode_t _event_mode;                 // event mode
     uint32_t _evt_num;                        // the number of single listening events in the server model, default to 100 events
-    uint32_t _heartbeat;                      // client mode heartbeat interval, default to 100 milliseconds
+    uint32_t _heartbeat;                      // heartbeat interval, default to 100 ms, minimum 10 ms, the timeout server will clearly connect
     uint32_t _reconnect_interval;             // reconnect interval
     uint32_t _queue_size;                     // the number of messages in the message queue, default to 1024 messages
     std::set<std::string> _topics;            // topics of PUB/SUB mode
@@ -183,7 +183,7 @@ public:
         _protocol_type = COMM_PROTOCOL_TYPE::TCP;
         _event_mode = EVENT_MODE::EVENT_POLL_ET;
         _evt_num = 100;
-        _heartbeat = 1000;
+        _heartbeat = 100;
         _reconnect_interval = 500;
         _queue_size = 1024;
         _topics.clear();

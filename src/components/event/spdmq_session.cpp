@@ -18,7 +18,8 @@
 
 namespace speed::mq {
 
-spdmq_session::spdmq_session(fd_t session_id) : session_id_(session_id) {}
+spdmq_session::spdmq_session(fd_t session_id) 
+    : session_id_(session_id) {}
 
 spdmq_session::~spdmq_session() {
     close_session();
@@ -31,6 +32,9 @@ fd_t spdmq_session::session_id() {
 void spdmq_session::close_session() {
     if (session_id_ > 3) {
         close(session_id_);
+        if (on_notify_event) {
+            on_notify_event(session_id_);
+        }
     }
     session_id_ = -1;
 }
