@@ -6,7 +6,7 @@ using namespace speed::mq;
 int main () {
     spdmq_ctx_t ctx;
     ctx.mode(COMM_MODE::SPDMQ_PUB) // 设置 pub 模式
-       .heartbeat(50);        // 设置心跳为 50 ms
+       .heartbeat(1000);        // 设置心跳为 50 ms
     auto mq_ptr = NEW_SPDMQ(ctx);
     mq_ptr->on_online = [] (spdmq_msg_t& msg) { // 设置客户端在线回调函数
         std::cout << "client connect success, session id:" << msg.session_id << std::endl;

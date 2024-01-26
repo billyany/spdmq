@@ -1,0 +1,14 @@
+[requires]
+fmt/10.2.1
+
+[generators]
+cmake
+cmake_paths
+cmake_find_package
+
+[options]
+fmt:shared=False
+
+[imports]
+include, * -> ../3party/include/
+lib, * -> ../3party/lib/
