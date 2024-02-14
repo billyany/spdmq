@@ -11,7 +11,7 @@
 [![license](https://badgen.net/github/license/billyany/spdmq?icon=github)](LICENSE)
 
 
-`spdmq`是一个类似于`zmq`的网络库，提供了更易用的接口，基于C++17标准开发（目前暂时只支持Linux平台，后续会支持跨平台）。
+`spdmq`是一个类似于`zmq`的网络库，提供了更易用的接口，基于C++17标准开发, 仅支持Linux系统使用。
 
 
 ## ⚡️ 快速入门
