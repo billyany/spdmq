@@ -141,9 +141,8 @@ void epoll_poller::remove_channel(socket_channel* channel) {
     assert(index == kAdded || index == kDeleted);
     channels_.erase(fd);
 
-    if (index == kAdded)
-    {
-    update(EPOLL_CTL_DEL, channel);
+    if (index == kAdded) {
+        update(EPOLL_CTL_DEL, channel);
     }
     channel->set_index(kNew);
 }
