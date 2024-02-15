@@ -19,8 +19,13 @@
 #include <regex>
 #include <chrono>
 #include <thread>
+#include <cstring>
 
 namespace speed::mq {
+
+inline void mem_zero(void* p, size_t n) {
+    memset(p, 0, n);
+}
 
 inline bool regex_match(const std::string& url, const std::string& re) {
     std::regex regex(re);
