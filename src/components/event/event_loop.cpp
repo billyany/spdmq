@@ -14,10 +14,14 @@
 *   limitations under the License.
 */
 
+#include <assert.h>
+#include <mutex>
 #include <unistd.h>
 #include <sys/eventfd.h>
+
 #include "event_loop.h"
 #include "base_poller.h"
+#include "socket_channel.h"
 
 namespace speed::mq {
 
@@ -45,211 +49,180 @@ event_loop::event_loop()
     iteration_(0),
     thread_id_(std::this_thread::get_id()),
     poller_(base_poller::new_poller(*this)),
-    timerQueue_(new TimerQueue(this)),
-    wakeupFd_(create_eventfd()),
-    wakeupChannel_(new Channel(this, wakeupFd_)),
-    currentActiveChannel_(NULL)
-{
-  LOG_DEBUG << "event_loop created " << this << " in thread " << thread_id_;
-  if (t_loopInThisThread)
-  {
-    LOG_FATAL << "Another event_loop " << t_loopInThisThread
-              << " exists in this thread " << thread_id_;
-  }
-  else
-  {
-    t_loopInThisThread = this;
-  }
-  wakeupChannel_->setReadCallback(
-      std::bind(&event_loop::handleRead, this));
-  // we are always reading the wakeupfd
-  wakeupChannel_->enableReading();
-}
-
-event_loop::~event_loop()
-{
-  LOG_DEBUG << "event_loop " << this << " of thread " << thread_id_
-            << " destructs in thread " << CurrentThread::tid();
-  wakeupChannel_->disableAll();
-  wakeupChannel_->remove();
-  ::close(wakeupFd_);
-  t_loopInThisThread = NULL;
-}
-
-void event_loop::loop()
-{
-  assert(!looping_);
-  assertInLoopThread();
-  looping_ = true;
-  quit_ = false;  // FIXME: what if someone calls quit() before loop() ?
-  LOG_TRACE << "event_loop " << this << " start looping";
-
-  while (!quit_)
-  {
-    activeChannels_.clear();
-    pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);
-    ++iteration_;
-    if (Logger::logLevel() <= Logger::TRACE)
-    {
-      printActiveChannels();
+    // timerQueue_(new TimerQueue(this)),
+    wakeup_fd_(create_eventfd()),
+    wakeup_channel_(new socket_channel(*this, wakeup_fd_)),
+    current_active_channel_(nullptr) {
+    // LOG_DEBUG << "event_loop created " << this << " in thread " << thread_id_;
+    if (t_loop_in_this_thread) {
+        // LOG_FATAL << "Another event_loop " << t_loop_in_this_thread << " exists in this thread " << thread_id_;
+    } else {
+        t_loop_in_this_thread = this;
     }
-    // TODO sort channel by priority
-    eventHandling_ = true;
-    for (Channel* channel : activeChannels_)
-    {
-      currentActiveChannel_ = channel;
-      currentActiveChannel_->handleEvent(pollReturnTime_);
+    wakeup_channel_->set_read_callback(std::bind(&event_loop::handle_read, this));
+    wakeup_channel_->enable_reading();
+}
+
+event_loop::~event_loop() {
+    // LOG_DEBUG << "event_loop " << this << " of thread " << thread_id_
+    // << " destructs in thread " << CurrentThread::tid();
+    wakeup_channel_->disable_all();
+    wakeup_channel_->remove();
+    ::close(wakeup_fd_);
+    t_loop_in_this_thread = nullptr;
+}
+
+void event_loop::loop() {
+    assert(!looping_);
+    assert_in_loop_thread();
+    looping_ = true;
+    quit_ = false;  // FIXME: what if someone calls quit() before loop() ?
+    // LOG_TRACE << "event_loop " << this << " start looping";
+
+    while (!quit_) {
+        active_channels_.clear();
+        poller_->poll(kPollTimeMs, &active_channels_);
+        ++iteration_;
+        // if (Logger::logLevel() <= Logger::TRACE) {
+        //     printActiveChannels();
+        // }
+        // TODO sort channel by priority
+        event_handling_ = true;
+        for (socket_channel* channel : active_channels_) {
+            current_active_channel_ = channel;
+            current_active_channel_->handle_event();
+        }
+        current_active_channel_ = nullptr;
+        event_handling_ = false;
+        do_pending_functors();
     }
-    currentActiveChannel_ = NULL;
-    eventHandling_ = false;
-    doPendingFunctors();
-  }
 
-  LOG_TRACE << "event_loop " << this << " stop looping";
-  looping_ = false;
+    // LOG_TRACE << "event_loop " << this << " stop looping";
+    looping_ = false;
 }
 
-void event_loop::quit()
-{
-  quit_ = true;
-  // There is a chance that loop() just executes while(!quit_) and exits,
-  // then event_loop destructs, then we are accessing an invalid object.
-  // Can be fixed using mutex_ in both places.
-  if (!isInLoopThread())
-  {
-    wakeup();
-  }
+void event_loop::quit() {
+    quit_ = true;
+    // There is a chance that loop() just executes while(!quit_) and exits,
+    // then event_loop destructs, then we are accessing an invalid object.
+    // Can be fixed using mutex_ in both places.
+    if (!is_in_loop_thread()) {
+        wakeup();
+    }
 }
 
-void event_loop::runInLoop(Functor cb)
-{
-  if (isInLoopThread())
-  {
-    cb();
-  }
-  else
-  {
-    queueInLoop(std::move(cb));
-  }
+void event_loop::run_in_loop(functor cb) {
+    if (is_in_loop_thread()) {
+        cb();
+    } else {
+        queue_in_loop(std::move(cb));
+    }
 }
 
-void event_loop::queueInLoop(Functor cb)
-{
-  {
-  MutexLockGuard lock(mutex_);
-  pendingFunctors_.push_back(std::move(cb));
-  }
+void event_loop::queue_in_loop(functor cb) {
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pending_functors_.push_back(std::move(cb));
+    }
 
-  if (!isInLoopThread() || calling_pending_functors_)
-  {
-    wakeup();
-  }
+    if (!is_in_loop_thread() || calling_pending_functors_) {
+        wakeup();
+    }
 }
 
-size_t event_loop::queueSize() const
-{
-  MutexLockGuard lock(mutex_);
-  return pendingFunctors_.size();
+size_t event_loop::queue_size() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return pending_functors_.size();
 }
 
-TimerId event_loop::runAt(Timestamp time, TimerCallback cb)
-{
-  return timerQueue_->addTimer(std::move(cb), time, 0.0);
+// TimerId event_loop::runAt(Timestamp time, TimerCallback cb)
+// {
+//   return timerQueue_->addTimer(std::move(cb), time, 0.0);
+// }
+
+// TimerId event_loop::runAfter(double delay, TimerCallback cb)
+// {
+//   Timestamp time(addTime(Timestamp::now(), delay));
+//   return runAt(time, std::move(cb));
+// }
+
+// TimerId event_loop::runEvery(double interval, TimerCallback cb)
+// {
+//   Timestamp time(addTime(Timestamp::now(), interval));
+//   return timerQueue_->addTimer(std::move(cb), time, interval);
+// }
+
+// void event_loop::cancel(TimerId timerId)
+// {
+//   return timerQueue_->cancel(timerId);
+// }
+
+void event_loop::update_channel(socket_channel* channel) {
+    assert(&channel->owner_loop() == this);
+    assert_in_loop_thread();
+    poller_->update_channel(channel);
 }
 
-TimerId event_loop::runAfter(double delay, TimerCallback cb)
-{
-  Timestamp time(addTime(Timestamp::now(), delay));
-  return runAt(time, std::move(cb));
+void event_loop::remove_channel(socket_channel* channel) {
+    assert(&channel->owner_loop() == this);
+    assert_in_loop_thread();
+    if (event_handling_) {
+        assert(current_active_channel_ == channel || 
+        std::find(active_channels_.begin(), active_channels_.end(), channel) == active_channels_.end());
+    }
+    poller_->remove_channel(channel);
 }
 
-TimerId event_loop::runEvery(double interval, TimerCallback cb)
-{
-  Timestamp time(addTime(Timestamp::now(), interval));
-  return timerQueue_->addTimer(std::move(cb), time, interval);
+bool event_loop::has_channel(socket_channel* channel) {
+    assert(&channel->owner_loop() == this);
+    assert_in_loop_thread();
+    return poller_->has_channel(channel);
 }
 
-void event_loop::cancel(TimerId timerId)
-{
-  return timerQueue_->cancel(timerId);
+// void event_loop::abortNotInLoopThread()
+// {
+//   LOG_FATAL << "event_loop::abortNotInLoopThread - event_loop " << this
+//             << " was created in thread_id_ = " << thread_id_
+//             << ", current thread id = " <<  CurrentThread::tid();
+// }
+
+void event_loop::wakeup() {
+    uint64_t one = 1;
+    ssize_t n = ::write(wakeup_fd_, &one, sizeof one);
+    if (n != sizeof one) {
+        // LOG_ERROR << "event_loop::wakeup() writes " << n << " bytes instead of 8";
+    }
 }
 
-void event_loop::updateChannel(Channel* channel)
-{
-  assert(channel->ownerLoop() == this);
-  assertInLoopThread();
-  poller_->updateChannel(channel);
+void event_loop::handle_read() {
+    uint64_t one = 1;
+    ssize_t n = ::read(wakeup_fd_, &one, sizeof one);
+    if (n != sizeof one) {
+        // LOG_ERROR << "event_loop::handleRead() reads " << n << " bytes instead of 8";
+    }
 }
 
-void event_loop::removeChannel(Channel* channel)
-{
-  assert(channel->ownerLoop() == this);
-  assertInLoopThread();
-  if (eventHandling_)
-  {
-    assert(currentActiveChannel_ == channel ||
-        std::find(activeChannels_.begin(), activeChannels_.end(), channel) == activeChannels_.end());
-  }
-  poller_->removeChannel(channel);
+void event_loop::do_pending_functors() {
+    std::vector<functor> functors;
+    calling_pending_functors_ = true;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        functors.swap(pending_functors_);
+    }
+
+    for (const functor& fun : functors) {
+        fun();
+    }
+    calling_pending_functors_ = false;
 }
 
-bool event_loop::hasChannel(Channel* channel)
-{
-  assert(channel->ownerLoop() == this);
-  assertInLoopThread();
-  return poller_->hasChannel(channel);
-}
-
-void event_loop::abortNotInLoopThread()
-{
-  LOG_FATAL << "event_loop::abortNotInLoopThread - event_loop " << this
-            << " was created in thread_id_ = " << thread_id_
-            << ", current thread id = " <<  CurrentThread::tid();
-}
-
-void event_loop::wakeup()
-{
-  uint64_t one = 1;
-  ssize_t n = sockets::write(wakeupFd_, &one, sizeof one);
-  if (n != sizeof one)
-  {
-    LOG_ERROR << "event_loop::wakeup() writes " << n << " bytes instead of 8";
-  }
-}
-
-void event_loop::handleRead()
-{
-  uint64_t one = 1;
-  ssize_t n = sockets::read(wakeupFd_, &one, sizeof one);
-  if (n != sizeof one)
-  {
-    LOG_ERROR << "event_loop::handleRead() reads " << n << " bytes instead of 8";
-  }
-}
-
-void event_loop::doPendingFunctors()
-{
-  std::vector<Functor> functors;
-  calling_pending_functors_ = true;
-
-  {
-  MutexLockGuard lock(mutex_);
-  functors.swap(pendingFunctors_);
-  }
-
-  for (const Functor& functor : functors)
-  {
-    functor();
-  }
-  calling_pending_functors_ = false;
-}
-
-void event_loop::printActiveChannels() const
-{
-  for (const Channel* channel : activeChannels_)
-  {
-    LOG_TRACE << "{" << channel->reventsToString() << "} ";
-  }
-}
+// void event_loop::printActiveChannels() const
+// {
+//   for (const Channel* channel : active_channels_)
+//   {
+//     LOG_TRACE << "{" << channel->reventsToString() << "} ";
+//   }
+// }
 
 }  // namespace

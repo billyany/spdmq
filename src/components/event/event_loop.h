@@ -17,6 +17,7 @@
 #pragma once
 
 #include <any>
+#include <cstdint>
 #include <mutex>
 #include <thread>
 #include <atomic>
@@ -36,18 +37,18 @@ class TimerQueue;
 
 class event_loop : spdmq_uncopyable {
 public:
-    typedef std::function<void()> Functor;
+    typedef std::function<void()> functor;
     event_loop();
     ~event_loop();  // force out-line dtor, for std::unique_ptr members.
 
 private:
     void abort_not_in_loop_thread();
-    void handleRead();  // waked up
-    void doPendingFunctors();
+    void handle_read();  // waked up
+    void do_pending_functors();
 
-    void printActiveChannels() const; // DEBUG
+    void print_active_channels() const; // DEBUG
 
-    typedef std::vector<socket_channel*> ChannelList;
+    typedef std::vector<socket_channel*> channel_list_t;
 
     bool looping_; /* atomic */
     std::atomic<bool> quit_;
@@ -57,19 +58,19 @@ private:
     const std::thread::id thread_id_;
 
     std::unique_ptr<base_poller> poller_;
-    std::unique_ptr<TimerQueue> timerQueue_;
-    int wakeupFd_;
+    // std::unique_ptr<TimerQueue> timerQueue_;
+    int32_t wakeup_fd_;
     // unlike in TimerQueue, which is an internal class,
     // we don't expose socket_channel to client.
-    std::unique_ptr<socket_channel> wakeupChannel_;
+    std::unique_ptr<socket_channel> wakeup_channel_;
     std::any context_;
 
     // scratch variables
-    ChannelList activeChannels_;
-    socket_channel* currentActiveChannel_;
+    channel_list_t active_channels_;
+    socket_channel* current_active_channel_;
 
     mutable std::mutex mutex_;
-    std::vector<Functor> pendingFunctors_;
+    std::vector<functor> pending_functors_;
 
 public:
 
@@ -94,13 +95,13 @@ public:
     /// It wakes up the loop, and run the cb.
     /// If in the same loop thread, cb is run within the function.
     /// Safe to call from other threads.
-    void runInLoop(Functor cb);
+    void run_in_loop(functor cb);
     /// Queues callback in the loop thread.
     /// Runs after finish pooling.
     /// Safe to call from other threads.
-    void queueInLoop(Functor cb);
+    void queue_in_loop(functor cb);
 
-    size_t queueSize() const;
+    size_t queue_size() const;
 
 //   // timers
 
@@ -127,9 +128,9 @@ public:
 
     // internal usage
     void wakeup();
-    void updateChannel(socket_channel* channel);
-    void removeChannel(socket_channel* channel);
-    bool hasChannel(socket_channel* channel);
+    void update_channel(socket_channel* channel);
+    void remove_channel(socket_channel* channel);
+    bool has_channel(socket_channel* channel);
 
     bool is_in_loop_thread() const {
         return thread_id_ == std::this_thread::get_id();
@@ -139,15 +140,15 @@ public:
         return event_handling_; 
     }
 
-    void setContext(const std::any& context) {
+    void set_context(const std::any& context) {
         context_ = context;
     }
 
-    const std::any& getContext() const {
+    const std::any& get_context() const {
         return context_;
     }
 
-    std::any get_mutable_context() {
+    std::any& get_mutable_context() {
         return context_;
     }
 

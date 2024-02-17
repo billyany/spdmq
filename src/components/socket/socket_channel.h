@@ -35,13 +35,11 @@ public:
     typedef std::function<void()> read_event_callback;
 
 private:
-    void update();
-
     static const int32_t kNoneEvent;
     static const int32_t kReadEvent;
     static const int32_t kWriteEvent;
 
-    event_loop& loop_;
+    event_loop&    loop_;
     const int32_t  fd_;
     int32_t        events_;
     int32_t        revents_; // it's the received event types of epoll or poll
@@ -62,88 +60,38 @@ private:
 
     void handle_event();
     void handle_event_with_guard();
-    void set_read_callback(read_event_callback cb) {
-        read_callback_ = std::move(cb);
-    }
 
-    void set_write_callback(event_callback cb) {
-        write_callback_ = std::move(cb);
-    }
-
-    void set_close_callback(event_callback cb) { 
-        close_callback_ = std::move(cb);
-    }
-
-    void set_error_callback(event_callback cb) {
-        error_callback_ = std::move(cb);
-    }
+    void set_read_callback(read_event_callback cb);
+    void set_write_callback(event_callback cb);
+    void set_close_callback(event_callback cb);
+    void set_error_callback(event_callback cb);
 
     // 将此通道绑定到 shared_ ptr 管理的所有者对象，防止所有者对象在 handle_event 中被销毁。
     void tie(const std::shared_ptr<void>&);
+    int32_t fd() const;
 
-    int32_t fd() const {
-        return fd_;
-    }
+    int32_t events() const;
+    void set_revents(int32_t revt); // used by pollers
     
-    int32_t events() const {
-        return events_;
-    }
-    
-    void set_revents(int32_t revt) {  // used by pollers
-        revents_ = revt;
-    }
+    bool is_reading() const;
+    void enable_reading();
+    void disable_reading();
 
-    bool is_none_event() const {
-         return events_ == kNoneEvent;
-    }
+    bool is_writing() const;
+    void enable_writing();
+    void disable_writing();
 
-    void enable_reading() {
-        events_ |= kReadEvent;
-        update();
-    }
-
-    void disable_reading() {
-        events_ &= ~kReadEvent;
-        update();
-    }
-
-    void enable_writing() {
-        events_ |= kWriteEvent;
-        update();
-    }
-
-    void disable_writing() {
-        events_ &= ~kWriteEvent;
-        update();
-    }
-
-    void disable_all() {
-        events_ = kNoneEvent;
-        update();
-    }
-
-    bool is_writing() const {
-        return events_ & kWriteEvent;
-    }
-
-    bool is_reading() const {
-        return events_ & kReadEvent;
-    }
+    bool is_none_event() const;
+    void disable_all();
 
     // for Poller
-    int32_t index() {
-        return index_;
-    }
-    
-    void set_index(int32_t idx) {
-        index_ = idx;
-    }
-
-    event_loop& owner_loop() {
-        return loop_;
-    }
-
+    int32_t index();
+    void set_index(int32_t idx);
+    event_loop& owner_loop();
     void remove();
+
+private:
+    void update();
 };
 
 }  /* speed::mq */

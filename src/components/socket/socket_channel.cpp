@@ -16,6 +16,8 @@
 
 #include <assert.h>
 #include <sys/epoll.h>
+
+#include "event_loop.h"
 #include "socket_channel.h"
 
 namespace speed::mq {
@@ -37,10 +39,9 @@ socket_channel::socket_channel(event_loop& loop, int fd)
 socket_channel::~socket_channel() {
     assert(!event_handling_);
     assert(!added2loop_);
-    // TODO
-    // if (loop_.isInLoopThread()) {
-    //     assert(!loop_.hasChannel(this));
-    // }
+    if (loop_.is_in_loop_thread()) {
+        assert(!loop_.has_channel(this));
+    }
 }
 
 void socket_channel::tie(const std::shared_ptr<void>& obj) {
@@ -50,15 +51,13 @@ void socket_channel::tie(const std::shared_ptr<void>& obj) {
 
 void socket_channel::update() {
     added2loop_ = true;
-    // TODO
-    // loop_->update_channel(this);
+    loop_.update_channel(this);
 }
 
 void socket_channel::remove() {
     assert(is_none_event());
     added2loop_ = false;
-    // TODO
-    // loop_->removeChannel(this);
+    loop_.remove_channel(this);
 }
 
 void socket_channel::handle_event() {
@@ -92,6 +91,83 @@ void socket_channel::handle_event_with_guard() {
         write_callback_();
     }
     event_handling_ = false;
+}
+
+void socket_channel::set_read_callback(read_event_callback cb) {
+    read_callback_ = std::move(cb);
+}
+
+void socket_channel::set_write_callback(event_callback cb) {
+    write_callback_ = std::move(cb);
+}
+
+void socket_channel::set_close_callback(event_callback cb) { 
+    close_callback_ = std::move(cb);
+}
+
+void socket_channel::set_error_callback(event_callback cb) {
+    error_callback_ = std::move(cb);
+}
+
+int32_t socket_channel::fd() const {
+    return fd_;
+}
+
+int32_t socket_channel::events() const {
+    return events_;
+}
+
+void socket_channel::set_revents(int32_t revt) {  // used by pollers
+    revents_ = revt;
+}
+
+bool socket_channel::is_none_event() const {
+        return events_ == kNoneEvent;
+}
+
+void socket_channel::enable_reading() {
+    events_ |= kReadEvent;
+    update();
+}
+
+void socket_channel::disable_reading() {
+    events_ &= ~kReadEvent;
+    update();
+}
+
+void socket_channel::enable_writing() {
+    events_ |= kWriteEvent;
+    update();
+}
+
+void socket_channel::disable_writing() {
+    events_ &= ~kWriteEvent;
+    update();
+}
+
+void socket_channel::disable_all() {
+    events_ = kNoneEvent;
+    update();
+}
+
+bool socket_channel::is_writing() const {
+    return events_ & kWriteEvent;
+}
+
+bool socket_channel::is_reading() const {
+    return events_ & kReadEvent;
+}
+
+int32_t socket_channel::index() {
+    return index_;
+}
+
+void socket_channel::set_index(int32_t idx) {
+    index_ = idx;
+}
+
+event_loop& socket_channel::owner_loop() {
+    return loop_;
 }
 
 } /* namespace speed::mq */
