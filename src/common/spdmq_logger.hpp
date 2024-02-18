@@ -1,18 +1,24 @@
 #pragma once
 
-#include <iostream>
 #include <string>
-#include <sstream>
-#include <iomanip>
 #include <chrono>
 #include <atomic>
-// #include <cstring>
+#include <sstream>
+#include <iomanip>
+#include <cstring>
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? std::strrchr(__FILE__, '/') + 1 : __FILE__)
 #define LOGD(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::DEBUG, __FILENAME__, __LINE__, __VA_ARGS__)
 #define LOGI(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::INFO, __FILENAME__, __LINE__, __VA_ARGS__)
 #define LOGW(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::WARN, __FILENAME__, __LINE__, __VA_ARGS__)
 #define LOGE(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::ERROR, __FILENAME__, __LINE__, __VA_ARGS__)
+#define LOGF(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::FATAL, __FILENAME__, __LINE__, __VA_ARGS__)
+
+#define LOG_DEBUG(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::DEBUG, __FILENAME__, __LINE__, __VA_ARGS__)
+#define LOG_INFO(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::INFO, __FILENAME__, __LINE__, __VA_ARGS__)
+#define LOG_WARN(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::WARN, __FILENAME__, __LINE__, __VA_ARGS__)
+#define LOG_ERROR(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::ERROR, __FILENAME__, __LINE__, __VA_ARGS__)
+#define LOG_FATAL(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::FATAL, __FILENAME__, __LINE__, __VA_ARGS__)
 
 namespace opendbus {
 
@@ -21,6 +27,7 @@ enum class LOG_LEVEL: uint8_t {
     INFO = 1,
     WARN = 2,
     ERROR = 3,
+    FATAL = 4,
 };
 
 class spdmq_logger {
@@ -64,12 +71,16 @@ public:
                 break;
             case LOG_LEVEL::ERROR:
                 log_stream << "[ERROR] ";
+            case LOG_LEVEL::FATAL:
+                log_stream << "[FATAL] ";
                 break;
         }
 
-        log_stream << "[" << file << ":" << line << "] " << messageStream.str();
-        // log_stream << messageStream.str();
-        std::cout << log_stream.str() << std::endl;
+        log_stream << "[" << file << ":" << line << "] " << messageStream.str() << std::endl;
+        std::printf("%s", log_stream.str().data());
+        if (LOG_LEVEL::FATAL == level) {
+            std::exit(1); // 致命错误，退出程序
+        }
     }
 
 private:

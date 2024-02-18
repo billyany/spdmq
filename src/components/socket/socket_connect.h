@@ -16,10 +16,13 @@
 
 #pragma once
 #include <any>
+#include <string>
 #include <memory>
 #include <functional>
-#include "spdmq_uncopyable.h"
+
+#include "inet_address.h"
 #include "socket_buffer.h"
+#include "spdmq_uncopyable.h"
 
 
 // struct tcp_info is in <netinet/tcp.h>
@@ -27,13 +30,14 @@ struct tcp_info;
 
 namespace speed::mq {
 
-class socket_channel;
 class event_loop;
-// class Socket;
+class base_socket;
+class socket_channel;
 class socket_connect;
+
 typedef std::shared_ptr<socket_connect> tcp_connection_ptr;
-typedef std::function<void (const tcp_connection_ptr&)> connection_callback;
 typedef std::function<void (const tcp_connection_ptr&)> close_callback;
+typedef std::function<void (const tcp_connection_ptr&)> connection_callback;
 typedef std::function<void (const tcp_connection_ptr&)> write_complete_callback;
 typedef std::function<void (const tcp_connection_ptr&, size_t)> high_water_mark_callback;
 typedef std::function<void (const tcp_connection_ptr&, socket_buffer*)> message_callback;
@@ -43,49 +47,52 @@ private:
     enum StateE { kDisconnected, kConnecting, kConnected, kDisconnecting };
     event_loop* loop_;
     const std::string name_;
-    StateE state_;  // FIXME: use atomic variable
+    StateE state_;
     bool reading_;
-    // we don't expose those classes to client.
-    //   std::unique_ptr<Socket> socket_;
+    std::unique_ptr<base_socket> socket_;
     std::unique_ptr<socket_channel> channel_;
-    connection_callback connection_callback_;
+    const inet_address local_addr_;
+    const inet_address peer_addr_;
+    size_t high_water_mark_;
+
+    close_callback close_callback_;
     message_callback message_callback_;
+    connection_callback connection_callback_;
     write_complete_callback write_complete_callback_;
     high_water_mark_callback high_water_mark_callback_;
-    close_callback close_callback_;
-    size_t high_water_mark_;
+
     socket_buffer input_buffer_;
-    socket_buffer output_buffer_; // FIXME: use list<Buffer> as output buffer.
+    socket_buffer output_buffer_;
     std::any context_;
-    // FIXME: creationTime_, lastReceiveTime_
-    //        bytesReceived_, bytesSent_
 
 public:
-    socket_connect(event_loop* loop,
+    socket_connect(event_loop* loop, 
                    const std::string& name,
-                   int sockfd);
+                   int sockfd,
+                   const inet_address& local_addr,
+                   const inet_address& peer_addr);
     ~socket_connect();
 
-    event_loop* getLoop() const { return loop_; }
-    const std::string& name() const { return name_; }
-    //   const InetAddress& localAddress() const { return localAddr_; }
-    //   const InetAddress& peerAddress() const { return peerAddr_; }
-    bool connected() const { return state_ == kConnected; }
-    bool disconnected() const { return state_ == kDisconnected; }
-    // return true if success.
-    // bool get_tcp_info(struct tcp_info*) const;
-    // std::string get_tcp_info_string() const;
+    event_loop* get_loop() const;
+    const std::string& name() const;
+    const inet_address& local_address() const;
+    const inet_address& peer_address() const;
+    
+    bool connected() const;
+    bool disconnected() const;
 
-    void send(const std::string& message);
-    void send(std::string&& message); // C++11
+    bool get_tcp_info(struct tcp_info*) const;
+    std::string get_tcp_info_string() const;
+
     void send(const void* message, int len);
-    void send(socket_buffer&& message); // C++11
-    void send(socket_buffer* message);  // this one will swap data
+    void send(const std::string& message);
+    void send(socket_buffer* message);
     void shutdown(); // NOT thread safe, no simultaneous calling
-    // void shutdownAndForceCloseAfter(double seconds); // NOT thread safe, no simultaneous calling
+
     void force_close();
     void force_close_with_delay(double seconds);
     void set_tcp_no_delay(bool on);
+
     // reading or not
     void start_read();
     void stop_read();
@@ -131,6 +138,8 @@ public:
     void connect_established();   // should be called only once
     // called when TcpServer has removed me from its map
     void connect_destroyed();  // should be called only once
+
+    const char* state2string() const;
 
  private:
     void handle_read();

@@ -85,8 +85,8 @@ public:
     void loop();
 
     // 退出循环。
-    // 这不是100%线程安全的，如果您通过原始指针进行调用，
-    // 为了100%的安全性，最好通过 shared_ptr＜event_loop＞ 进行调用。
+    // 这不是 100% 线程安全的，如果您通过原始指针进行调用，
+    // 为了 100% 的安全性，最好通过 shared_ptr＜event_loop＞ 进行调用。
     void quit();
 
     int64_t iteration() const { return iteration_; }

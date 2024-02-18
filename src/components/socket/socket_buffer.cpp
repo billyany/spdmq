@@ -44,6 +44,10 @@ ssize_t socket_buffer::recv_bytes(int32_t fd, int32_t& saved_errno) {
     return recv_size;
 }
 
+const char* socket_buffer::peek() const { 
+    return begin() + reader_index_;
+}
+
 std::size_t socket_buffer::readable_bytes() const {
     return writer_index_ - reader_index_;
 }
@@ -54,6 +58,32 @@ std::size_t socket_buffer::writable_bytes() const {
 
 std::size_t socket_buffer::prependable_bytes() const {
     return reader_index_;
+}
+
+void socket_buffer::retrieve_all() {
+    reader_index_ = k_cheap_prepend;
+    writer_index_ = k_cheap_prepend;
+}
+
+void socket_buffer::retrieve(size_t len) {
+    assert(len <= readable_bytes());
+    if (len < readable_bytes()) {
+        reader_index_ += len;
+    }
+    else {
+        retrieve_all();
+    }
+}
+
+std::string socket_buffer::retrieve_all_as_string() {
+    return retrieve_as_string(readable_bytes());
+}
+
+std::string socket_buffer::retrieve_as_string(size_t len) {
+    assert(len <= readable_bytes());
+    std::string result(peek(), len);
+    retrieve(len);
+    return result;
 }
 
 char* socket_buffer::begin_write() {

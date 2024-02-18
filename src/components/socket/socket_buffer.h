@@ -23,8 +23,9 @@
 /// |                   |     (CONTENT)    |                  |
 /// +-------------------+------------------+------------------+
 /// |                   |                  |                  |
-/// 0      <=      readerIndex   <=   writerIndex    <=     size
+/// 0      <=    reader_index_   <=   writer_index    <=     size
 
+#include <string>
 #include <vector>
 #include <sys/uio.h>
 #include <sys/socket.h>
@@ -44,9 +45,17 @@ private:
 public:
     ssize_t recv_bytes(int32_t fd, int32_t& saved_errno);
 
+    const char* peek() const;
     std::size_t readable_bytes() const;
     std::size_t writable_bytes() const;
     std::size_t prependable_bytes() const;
+    
+    void retrieve_all();
+    void retrieve(size_t len);
+    
+
+    std::string retrieve_all_as_string();
+    std::string retrieve_as_string(size_t len);
 
     char* begin_write();
     const char* begin_write() const;
