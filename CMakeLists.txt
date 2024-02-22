@@ -71,6 +71,8 @@ add_library(spdmq ${spdmq_SRC})
 target_link_libraries(spdmq pthread)
 
 add_executable(pub example/pub.cpp)
-target_link_libraries(pub spdmq)
+target_link_libraries(pub spdmq profiler)
 add_executable(sub example/sub.cpp)
 target_link_libraries(sub spdmq)
+
+add_executable(test example/test.cpp)

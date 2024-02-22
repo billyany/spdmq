@@ -18,6 +18,7 @@
 #include <sys/timerfd.h>
 
 #include "assert.h"
+#include "time_point.h"
 #include "timer.h"
 #include "timer_queue.h"
 #include "event_loop.h"
@@ -35,28 +36,28 @@ int32_t create_timerfd() {
     return timerfd;
 }
 
-struct timespec how_much_time_from_now(time_stamp when) {
-    int64_t microseconds = std::chrono::duration_cast<std::chrono::microseconds>(when.time_since_epoch()).count() - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+timespec how_much_time_from_now(time_point when) {
+    int64_t microseconds = when - time_point::now();
     if (microseconds < 100) {
         microseconds = 100;
     }
 
-    struct timespec ts;
+    timespec ts;
     ts.tv_sec = static_cast<time_t>(microseconds / (1000 * 1000));
     ts.tv_nsec = static_cast<long>((microseconds % (1000 * 1000)) * 1000);
     return ts;
 }
 
-void read_timerfd(int timerfd, time_stamp now) {
+void read_timerfd(int timerfd, time_point now) {
     uint64_t howmany;
     ssize_t n = ::read(timerfd, &howmany, sizeof howmany);
-    LOG_DEBUG("timer_queue::handle_read() %llu, %llu", howmany, std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+    LOG_DEBUG("timer_queue::handle_read() %llu, %llu", howmany, now.micros_count());
     if (n != sizeof howmany) {
         LOG_ERROR("timer_queue::handle_read() reads %ld bytes instead of 8", n);
     }
 }
 
-void reset_timerfd(int timerfd, time_stamp expiration) {
+void reset_timerfd(int timerfd, time_point expiration) {
     // wake up loop by timerfd_settime()
     struct itimerspec new_value;
     struct itimerspec old_value;
@@ -90,7 +91,7 @@ timer_queue::~timer_queue()
     }
 }
 
-timer_id timer_queue::add_timer(timer_callback cb, time_stamp when, int32_t interval) {
+timer_id timer_queue::add_timer(timer_callback cb, time_point when, int32_t interval) {
     timer* timer = new speed::mq::timer(std::move(cb), when, interval);
     loop_->run_in_loop(std::bind(&timer_queue::add_timer_in_loop, this, timer));
     return timer_id(timer, timer->sequence());
@@ -128,7 +129,7 @@ void timer_queue::cancel_in_loop(timer_id timerId) {
 
 void timer_queue::handle_read() {
     loop_->assert_in_loop_thread();
-    time_stamp now(std::chrono::system_clock::now());
+    auto now = time_point::now();
     read_timerfd(timerfd_, now);
 
     std::vector<entry> expired = get_expired(now);
@@ -144,7 +145,7 @@ void timer_queue::handle_read() {
     reset(expired, now);
 }
 
-std::vector<timer_queue::entry> timer_queue::get_expired(time_stamp now) {
+std::vector<timer_queue::entry> timer_queue::get_expired(time_point now) {
 
     assert(timers_.size() == active_timers_.size());
     std::vector<entry> expired;
@@ -165,10 +166,7 @@ std::vector<timer_queue::entry> timer_queue::get_expired(time_stamp now) {
     return expired;
 }
 
-void timer_queue::reset(const std::vector<entry>& expired, time_stamp now)
-{
-    time_stamp next_expire;
-
+void timer_queue::reset(const std::vector<entry>& expired, time_point now) {
     for (const entry& it : expired)
     {
         active_timer timer(it.second, it.second->sequence());
@@ -181,11 +179,12 @@ void timer_queue::reset(const std::vector<entry>& expired, time_stamp now)
         }
     }
 
+    auto next_expire = time_point::create_invalid_time_point();
     if (!timers_.empty()) {
         next_expire = timers_.begin()->second->expiration();
     }
 
-    if (next_expire.time_since_epoch().count()) {
+    if (next_expire.valid()) {
         reset_timerfd(timerfd_, next_expire);
     }
 }
@@ -193,24 +192,24 @@ void timer_queue::reset(const std::vector<entry>& expired, time_stamp now)
 bool timer_queue::insert(timer* timer) {
     loop_->assert_in_loop_thread();
     assert(timers_.size() == active_timers_.size());
-    bool earliestChanged = false;
-    time_stamp when = timer->expiration();
+    bool earliest_changed = false;
+    time_point when = timer->expiration();
     auto it = timers_.begin();
     if (it == timers_.end() || when < it->first) {
-        earliestChanged = true;
+        earliest_changed = true;
     }
     {
-        std::pair<timer_list::iterator, bool> result = timers_.insert(entry(when, timer));
-        assert(result.second); (void)result;
-    }
-    {
-        auto result = active_timers_.insert(active_timer(timer, timer->sequence()));
-        assert(result.second);
-        (void)result;
+        auto result1 = timers_.insert(entry(when, timer));
+        assert(result1.second);
+        (void)result1;
+
+        auto result2 = active_timers_.insert(active_timer(timer, timer->sequence()));
+        assert(result2.second);
+        (void)result2;
     }
 
     assert(timers_.size() == active_timers_.size());
-    return earliestChanged;
+    return earliest_changed;
 }
 
 } /* namespace speed::mq */

@@ -8,12 +8,14 @@
 #include <cstring>
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? std::strrchr(__FILE__, '/') + 1 : __FILE__)
+#define LOGT(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::TRACE, __FILENAME__, __LINE__, __VA_ARGS__)
 #define LOGD(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::DEBUG, __FILENAME__, __LINE__, __VA_ARGS__)
 #define LOGI(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::INFO, __FILENAME__, __LINE__, __VA_ARGS__)
 #define LOGW(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::WARN, __FILENAME__, __LINE__, __VA_ARGS__)
 #define LOGE(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::ERROR, __FILENAME__, __LINE__, __VA_ARGS__)
 #define LOGF(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::FATAL, __FILENAME__, __LINE__, __VA_ARGS__)
 
+#define LOG_TRACE(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::TRACE, __FILENAME__, __LINE__, __VA_ARGS__)
 #define LOG_DEBUG(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::DEBUG, __FILENAME__, __LINE__, __VA_ARGS__)
 #define LOG_INFO(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::INFO, __FILENAME__, __LINE__, __VA_ARGS__)
 #define LOG_WARN(...) opendbus::spdmq_logger::instance()->log(opendbus::LOG_LEVEL::WARN, __FILENAME__, __LINE__, __VA_ARGS__)
@@ -23,11 +25,12 @@
 namespace opendbus {
 
 enum class LOG_LEVEL: uint8_t {
-    DEBUG = 0,
-    INFO = 1,
-    WARN = 2,
-    ERROR = 3,
-    FATAL = 4,
+    TRACE = 0,
+    DEBUG,
+    INFO,
+    WARN,
+    ERROR,
+    FATAL,
 };
 
 class spdmq_logger {

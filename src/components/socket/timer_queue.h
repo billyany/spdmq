@@ -30,7 +30,7 @@ class timer_id;
 // 尽力而为计时器队列,不能保证回调会准时。
 class timer_queue : spdmq_uncopyable {
 private:
-    typedef std::pair<time_stamp, timer*> entry;
+    typedef std::pair<time_point, timer*> entry;
     typedef std::set<entry> timer_list;
     typedef std::pair<timer*, int64_t> active_timer;
     typedef std::set<active_timer> active_timer_set;
@@ -48,16 +48,17 @@ private:
 public:
     explicit timer_queue(event_loop* loop);
     ~timer_queue();
-    timer_id add_timer(timer_callback cb, time_stamp when, int32_t interval);
+    timer_id add_timer(timer_callback cb, time_point when, int32_t interval);
     void cancel(timer_id timer_id);
 
 private:
     void add_timer_in_loop(timer* timer);
     void cancel_in_loop(timer_id timerId);
     void handle_read();
+
     // move out all expired timers
-    std::vector<entry> get_expired(time_stamp now);
-    void reset(const std::vector<entry>& expired, time_stamp now);
+    std::vector<entry> get_expired(time_point now);
+    void reset(const std::vector<entry>& expired, time_point now);
     bool insert(timer* timer);
 };
 

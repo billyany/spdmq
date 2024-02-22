@@ -15,6 +15,7 @@
 */
 
 #include <assert.h>
+#include <cstdint>
 #include <mutex>
 #include <unistd.h>
 #include <sys/eventfd.h>
@@ -22,6 +23,9 @@
 #include "event_loop.h"
 #include "base_poller.h"
 #include "socket_channel.h"
+#include "time_point.h"
+#include "timer_id.h"
+#include "timer_queue.h"
 
 namespace speed::mq {
 
@@ -49,7 +53,7 @@ event_loop::event_loop()
     iteration_(0),
     thread_id_(std::this_thread::get_id()),
     poller_(base_poller::new_poller(*this)),
-    // timerQueue_(new TimerQueue(this)),
+    timer_queue_(new timer_queue(this)),
     wakeup_fd_(create_eventfd()),
     wakeup_channel_(new socket_channel(*this, wakeup_fd_)),
     current_active_channel_(nullptr) {
@@ -135,27 +139,23 @@ size_t event_loop::queue_size() const {
     return pending_functors_.size();
 }
 
-// TimerId event_loop::runAt(Timestamp time, TimerCallback cb)
-// {
-//   return timerQueue_->addTimer(std::move(cb), time, 0.0);
-// }
+timer_id event_loop::run_at(time_point time, timer_callback cb) {
+    return timer_queue_->add_timer(std::move(cb), time, 0.0);
+}
 
-// TimerId event_loop::runAfter(double delay, TimerCallback cb)
-// {
-//   Timestamp time(addTime(Timestamp::now(), delay));
-//   return runAt(time, std::move(cb));
-// }
+timer_id event_loop::run_after(int64_t delay, timer_callback cb) {
+    time_point time(add_time(time_point::now(), delay));
+    return run_at(time, std::move(cb));
+}
 
-// TimerId event_loop::runEvery(double interval, TimerCallback cb)
-// {
-//   Timestamp time(addTime(Timestamp::now(), interval));
-//   return timerQueue_->addTimer(std::move(cb), time, interval);
-// }
+timer_id event_loop::run_every(int64_t interval, timer_callback cb) {
+  time_point time(add_time(time_point::now(), interval));
+  return timer_queue_->add_timer(std::move(cb), time, interval);
+}
 
-// void event_loop::cancel(TimerId timerId)
-// {
-//   return timerQueue_->cancel(timerId);
-// }
+void event_loop::cancel(timer_id timer_id) {
+    return timer_queue_->cancel(timer_id);
+}
 
 void event_loop::update_channel(socket_channel* channel) {
     assert(&channel->owner_loop() == this);

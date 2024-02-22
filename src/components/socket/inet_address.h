@@ -18,8 +18,28 @@
 
 #include <string>
 #include <netinet/in.h>
+#include "spdmq_func.hpp"
+#include "spdmq_logger.hpp"
 
 namespace speed::mq {
+
+inline int create_nonblocking_socket(sa_family_t family) {
+    int sockfd = ::socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
+    if (sockfd < 0) {
+        LOG_FATAL("create_nonblocking_socket");
+    }
+    return sockfd;
+}
+
+inline sockaddr_in6 get_local_addr(int sockfd) {
+  sockaddr_in6 local_addr;
+  mem_zero(&local_addr, sizeof local_addr);
+  socklen_t addrlen = static_cast<socklen_t>(sizeof local_addr);
+  if (::getsockname(sockfd, reinterpret_cast<sockaddr*>(&local_addr), &addrlen) < 0) {
+    LOG_ERROR("get_local_addr failed");
+  }
+  return local_addr;
+}
 
 /**
  * @brief sockaddr_in的包装器
@@ -46,9 +66,9 @@ public:
 
     const struct sockaddr* get_sock_addr() const;
     void set_sock_addr_inet6(const struct sockaddr_in6& addr6);
+    sa_family_t family() const;
 
 private:
-    sa_family_t family() const;
     uint32_t ipv4_net_endian() const;
     uint16_t port_net_endian() const;
     void to_ip(char* buf, size_t size, const struct sockaddr* addr) const;   

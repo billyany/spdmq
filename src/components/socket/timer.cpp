@@ -21,15 +21,15 @@ namespace speed::mq {
 std::atomic_int64_t s_num_created_ = 0;
 
 int64_t timer::num_created() {
-    return s_num_created_.load();
+    return s_num_created_.fetch_add(1);
 }
 
-timer::timer(timer_callback cb, const time_stamp when, int32_t interval)
-    : callback_(std::move(cb)),
+timer::timer(timer_callback cb, const time_point when, int32_t interval)
+    : callback_(std::move(cb)), 
       expiration_(when), 
       interval_(interval), 
       repeat_(interval > 0), 
-      sequence_(s_num_created_.fetch_add(1)) {}
+      sequence_(num_created()) {}
 
 void timer::run() const {
     callback_();
@@ -43,17 +43,16 @@ int64_t timer::sequence () const {
     return sequence_;
 }
 
-void timer::restart(time_stamp now) {
+void timer::restart(time_point now) {
     if (repeat_) {
-        expiration_ = now + std::chrono::milliseconds(interval_);
+        expiration_ = now + time_duration_ms(interval_);
     }
     else {
-        // 创建空的无效时间点
-        expiration_ = std::chrono::time_point<std::chrono::system_clock>{};
+        expiration_ = time_point::create_invalid_time_point();
     }
 }
 
-time_stamp timer::expiration () const  {
+time_point timer::expiration () const  {
     return expiration_;
 }
 

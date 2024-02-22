@@ -16,38 +16,37 @@
 
 #pragma once
 
-#include <atomic>
+#include <mutex>
+#include <thread>
+#include <string>
 #include <functional>
-
-#include "time_point.h"
+#include <condition_variable>
 #include "spdmq_uncopyable.h"
 
 namespace speed::mq {
 
-typedef std::function<void()> timer_callback;
+class event_loop;
 
-class timer : spdmq_uncopyable {
-private:
-    static std::atomic_int64_t s_num_created_;
-
-private:
-    const timer_callback callback_;
-    time_point expiration_;
-    const int32_t interval_;
-    const bool repeat_;
-    const int64_t sequence_;
-
+class event_loop_thread : spdmq_uncopyable {
 public:
-    static int64_t num_created();
+    typedef std::function<void(event_loop*)> thread_init_callback;
 
-public:
-    timer(timer_callback cb, const time_point when, int32_t interval);
+    event_loop_thread(const thread_init_callback& cb = thread_init_callback(), const std::string& name = std::string());
+    ~event_loop_thread();
+    event_loop* start_loop();
 
-    void run() const;
-    bool repeat () const;
-    int64_t sequence () const;
-    void restart(time_point now);
-    time_point expiration () const;
-};
+private:
+    void thread_func();
 
-}  /* speed::mq */
+private:
+    bool exiting_;
+    std::string name_;
+    event_loop* loop_;
+    std::mutex mutex_;
+    std::thread thread_;
+    std::condition_variable cond_;
+    thread_init_callback callback_;
+
+}; /* class event_loop_thread */
+
+}  /* namespace speed::mq */

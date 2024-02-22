@@ -1,3 +1,4 @@
+#include "timer_id.h"
 #include "event_loop.h"
 #include "base_socket.h"
 #include "weak_callback.h"
@@ -170,13 +171,12 @@ void socket_connect::force_close() {
     }
 }
 
-void socket_connect::force_close_with_delay(double seconds)
+void socket_connect::force_close_with_delay(int64_t milliseconds)
 {
     if (state_ == kConnected || state_ == kDisconnecting) {
         set_state(kDisconnecting);
         // not forceCloseInLoop to avoid race condition
-        // TODO 
-        // loop_->runAfter(seconds, weak_bind(shared_from_this(), &socket_connect::force_close));
+        loop_->run_after(milliseconds, weak_bind(shared_from_this(), &socket_connect::force_close));
     }
 }
 
@@ -204,7 +204,6 @@ const char* socket_connect::state2string() const {
 }
 
 void socket_connect::set_tcp_no_delay(bool on) {
-    // TODO
     socket_->set_tcp_no_delay(on);
 }
 

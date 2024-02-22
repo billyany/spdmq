@@ -25,15 +25,17 @@
 #include <memory>
 #include <functional>
 #include "spdmq_uncopyable.h"
+#include "timer.h"
 
 //
 // Reactor, at most one per thread.
 
 namespace speed::mq {
 
-class socket_channel;
+class timer_id;
 class base_poller;
-class TimerQueue;
+class timer_queue;
+class socket_channel;
 
 class event_loop : spdmq_uncopyable {
 public:
@@ -42,12 +44,6 @@ public:
     ~event_loop();  // force out-line dtor, for std::unique_ptr members.
 
 private:
-    void abort_not_in_loop_thread();
-    void handle_read();  // waked up
-    void do_pending_functors();
-
-    void print_active_channels() const; // DEBUG
-
     typedef std::vector<socket_channel*> channel_list_t;
 
     bool looping_; /* atomic */
@@ -58,7 +54,7 @@ private:
     const std::thread::id thread_id_;
 
     std::unique_ptr<base_poller> poller_;
-    // std::unique_ptr<TimerQueue> timerQueue_;
+    std::unique_ptr<timer_queue> timer_queue_;
     int32_t wakeup_fd_;
     // unlike in TimerQueue, which is an internal class,
     // we don't expose socket_channel to client.
@@ -103,28 +99,28 @@ public:
 
     size_t queue_size() const;
 
-//   // timers
+  // timers
 
-//   ///
-//   /// Runs callback at 'time'.
-//   /// Safe to call from other threads.
-//   ///
-//   TimerId runAt(Timestamp time, TimerCallback cb);
-//   ///
-//   /// Runs callback after @c delay seconds.
-//   /// Safe to call from other threads.
-//   ///
-//   TimerId runAfter(double delay, TimerCallback cb);
-//   ///
-//   /// Runs callback every @c interval seconds.
-//   /// Safe to call from other threads.
-//   ///
-//   TimerId runEvery(double interval, TimerCallback cb);
-//   ///
-//   /// Cancels the timer.
-//   /// Safe to call from other threads.
-//   ///
-//   void cancel(TimerId timerId);
+  ///
+  /// Runs callback at 'time'.
+  /// Safe to call from other threads.
+  ///
+  timer_id run_at(time_point time, timer_callback cb);
+  ///
+  /// Runs callback after @c delay seconds.
+  /// Safe to call from other threads.
+  ///
+  timer_id run_after(int64_t delay, timer_callback cb);
+  ///
+  /// Runs callback every @c interval seconds.
+  /// Safe to call from other threads.
+  ///
+  timer_id run_every(int64_t interval, timer_callback cb);
+  ///
+  /// Cancels the timer.
+  /// Safe to call from other threads.
+  ///
+  void cancel(timer_id timer_id);
 
     // internal usage
     void wakeup();
@@ -153,6 +149,13 @@ public:
     }
 
     static event_loop* get_event_loop_of_current_thread();
-};
+
+private:
+    void abort_not_in_loop_thread();
+    void handle_read();  // waked up
+    void do_pending_functors();
+    void print_active_channels() const; // DEBUG
+
+}; /* class event_loop */
 
 }  /* namespace speed::mq */

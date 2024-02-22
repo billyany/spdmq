@@ -21,8 +21,7 @@
 
 namespace speed::mq {
 
-// 内联汇编代码使得类型模糊，
-// 所以我们暂时禁用警告。
+// 内联汇编代码使得类型模糊，禁用警告。
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"

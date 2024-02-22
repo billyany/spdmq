@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <iostream>
+#include <gperftools/profiler.h>
 #include "spdmq/spdmq.h"
 using namespace speed::mq;
 
@@ -18,6 +19,7 @@ int main () {
     mq_ptr->bind("tcp://0.0.0.0:12345"); // 绑定 tcp 端口地址
     mq_ptr->spin(true); // 设置后台运行
 
+    ProfilerStart("/home/billy/Projects/spdmq/build/heap_profile_output");
     int64_t cnt = 0;
     while (true) {
         spdmq_msg_t msg;
@@ -26,5 +28,8 @@ int main () {
         msg.payload = {data.begin(), data.end()};
         mq_ptr->send(msg);
         usleep(100 * 1000);
+        
     }
+    ProfilerStop();
+    
 }

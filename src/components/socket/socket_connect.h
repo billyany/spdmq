@@ -90,7 +90,7 @@ public:
     void shutdown(); // NOT thread safe, no simultaneous calling
 
     void force_close();
-    void force_close_with_delay(double seconds);
+    void force_close_with_delay(int64_t milliseconds);
     void set_tcp_no_delay(bool on);
 
     // reading or not
